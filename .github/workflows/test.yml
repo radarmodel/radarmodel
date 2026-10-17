@@ -1,0 +1,75 @@
+name: test
+
+# Runs on every push to main and on pull requests. A green run on main starts
+# the release workflow (release.yml), which listens for a workflow named
+# "test": keep this name.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Verify modules
+        run: go mod verify
+      - name: Test without CGo
+        shell: bash
+        env:
+          CGO_ENABLED: '0'
+        run: |
+          set -o pipefail
+          go test -count=1 ./... 2>&1 | tee test-output.txt
+      - name: Report test failures as annotations
+        # Job logs aren't always downloadable from where the repo is worked
+        # on; annotations are. Up to ten lines show per step.
+        if: failure()
+        shell: bash
+        run: |
+          grep -E -- '--- FAIL|^FAIL|panic:|_test\.go:[0-9]+:' test-output.txt | head -n 10 |
+            while IFS= read -r line; do echo "::error title=go test::$line"; done || true
+      - name: Repeat the failure tests
+        if: runner.os == 'Linux'
+        env:
+          CGO_ENABLED: '0'
+        run: go test -count=3 -run '^TestFailures' ./ai/
+      - name: Vet
+        run: go vet ./...
+      - name: Build without CGo
+        env:
+          CGO_ENABLED: '0'
+        run: go build ./cmd/radarmodel-ai
+      - name: Smoke test the built binary
+        if: runner.os != 'Windows'
+        run: sh scripts/smoke.sh ./radarmodel-ai
+      - name: Third-party license texts are all found
+        if: runner.os == 'Linux'
+        run: bash scripts/third-party-licenses.sh > /dev/null
+      - name: Race detector
+        if: runner.os == 'Linux'
+        run: go test -race ./...
+      - name: Check Go formatting
+        if: runner.os == 'Linux'
+        shell: bash
+        run: test -z "$(gofmt -l .)"
+      - name: Check module manifests are tidy
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod
