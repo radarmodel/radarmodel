@@ -39,7 +39,7 @@ each new way a list can come back wrong.
 ## Agreed plan (October 17, 2026)
 
 1. Core + RadarModel AI, release v0.1.0.  <- done (see below)
-2. Site on the standard Launch template: about, contact
+2. Site on the standard Launch template (done, see below): about, contact
    (info@radarmodel.com), quick start, download, reference; posts for the
    launch, the explainer ("models drifting under your app"), how it was
    tested, the name. Add RadarModel to softdevstudio.com.
@@ -62,8 +62,19 @@ each new way a list can come back wrong.
 - test/results was recorded on GitHub: every test, race detector, failure
   tests three times, smoke test, and a live scan of OpenRouter's public list
   (470 models parsed, second scan no changes).
-- Next: step 2, the site. Waiting for the owner to create the site repo
-  photozeitgeist/radarmodel.com.
+- **v0.1.1** followed the same day: the headline says "2 warnings", not
+  "2 warning". Checked the same way as 0.1.0.
+- **The site is built** at photozeitgeist/radarmodel.com on the standard
+  Launch template, unchanged (content and config values only; the repo came
+  as a copy of the AltSql site and all of its content was replaced). Pages:
+  about, contact, quick start, download, reference. Posts: the explainer,
+  the launch, how it was tested, the name. Four images drawn into
+  static/images. The quick start's output was taken from the released binary
+  run on saved lists. Built with Hugo, every internal link checked, looked at
+  in Chromium at 1280 and 390 px.
+- **softdevstudio.com** lists RadarModel as the twelfth project, with a note
+  on the launch.
+- Next: step 3, RadarModel Schema (v0.2.0), when the owner says go.
 
 ## Working here
 
