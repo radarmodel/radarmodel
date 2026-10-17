@@ -33,7 +33,9 @@ is started by a finished `test` run, not by the push itself.
   Linux x86-64 and ARM64, macOS Apple silicon and Intel, Windows x86-64. On
   Linux and macOS Apple silicon, `scripts/smoke.sh` runs the built
   `radarmodel-ai` offline against a saved model list: baseline, no change,
-  then a watched model removed, which must exit 1. Each archive gets the
+  then a watched model removed, which must exit 1. `scripts/smoke-schema.sh`
+  does the same for `radarmodel-schema` with two saved SQLite databases:
+  baseline, no change, then a dropped column, which must exit 1. Each archive gets the
   binaries, LICENSE, NOTICE, README.md and a THIRD_PARTY_LICENSES.md written
   by `scripts/third-party-licenses.sh`.
 - **release.** Runs only after every build passed. Creates the tag and the
