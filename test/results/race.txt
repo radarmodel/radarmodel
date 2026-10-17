@@ -1,9 +1,11 @@
 # Every test with the race detector
-# recorded 2026-10-17 19:21 UTC with go1.24.13 linux/amd64
-# Linux 6.17.0-1022-azure, INTEL(R) XEON(R) PLATINUM 8573C, 4 CPUs
+# recorded 2026-10-17 21:01 UTC with go1.24.0 linux/amd64
+# Linux 6.17.0-1022-azure, AMD EPYC 7763 64-Core Processor, 4 CPUs
 # command: env CGO_ENABLED=1 go test -race -count=1 ./...
 
 ?   	github.com/radarmodel/radarmodel	[no test files]
-ok  	github.com/radarmodel/radarmodel/ai	7.975s
-ok  	github.com/radarmodel/radarmodel/cmd/radarmodel-ai	4.053s
-ok  	github.com/radarmodel/radarmodel/core	1.067s
+ok  	github.com/radarmodel/radarmodel/ai	8.169s
+ok  	github.com/radarmodel/radarmodel/cmd/radarmodel-ai	4.073s
+ok  	github.com/radarmodel/radarmodel/cmd/radarmodel-schema	10.624s
+ok  	github.com/radarmodel/radarmodel/core	1.050s
+ok  	github.com/radarmodel/radarmodel/schema	64.282s

@@ -1,0 +1,244 @@
+# Schema failure tests: lost connections, revoked privileges, session settings, missing files and migrations mid-scan must never be reported as drift, and no password may show in an error; three runs
+# recorded 2026-10-17 21:03 UTC with go1.24.0 linux/amd64
+# Linux 6.17.0-1022-azure, AMD EPYC 7763 64-Core Processor, 4 CPUs
+# command: go test -count=3 -v -run ^(TestConnectionLostMidScanIsAFailedScan|TestServerUnreachableIsAFailedScan|TestWrongPasswordIsAFailedScan|TestMissingDSNVariableIsAFailedScan|TestSQLiteFileProblemsAreFailedScans|TestPostgresRevokedPrivilegesAreNotDrift|TestMySQLRevokedPrivilegeIsAFailedScanNotADrop|TestSchemaChangingDuringTheScan|TestTimeoutIsAFailedScan|TestTooFewTablesIsAFailedScan|TestConnectionStringNeverShowsUpInErrors|TestPostgresSessionSettingsAreNotDrift|TestMySQLUserWithoutSelectIsRefusedAtBaseline|TestMySQLRevokedTriggerPrivilegeIsAFailedScan|TestAcceptGetsPastAPrivilegeProbe)$ ./schema/
+
+=== RUN   TestTooFewTablesIsAFailedScan
+=== RUN   TestTooFewTablesIsAFailedScan/sqlite
+=== RUN   TestTooFewTablesIsAFailedScan/postgres
+=== RUN   TestTooFewTablesIsAFailedScan/mysql
+--- PASS: TestTooFewTablesIsAFailedScan (1.14s)
+    --- PASS: TestTooFewTablesIsAFailedScan/sqlite (0.86s)
+    --- PASS: TestTooFewTablesIsAFailedScan/postgres (0.14s)
+    --- PASS: TestTooFewTablesIsAFailedScan/mysql (0.14s)
+=== RUN   TestConnectionLostMidScanIsAFailedScan
+=== RUN   TestConnectionLostMidScanIsAFailedScan/sqlite
+    failure_test.go:68: no connection
+=== RUN   TestConnectionLostMidScanIsAFailedScan/postgres
+=== RUN   TestConnectionLostMidScanIsAFailedScan/mysql
+[mysql] 2026/10/17 21:03:33 connection.go:803 closing bad idle connection: EOF
+[mysql] 2026/10/17 21:03:33 packets.go:58 unexpected EOF
+--- PASS: TestConnectionLostMidScanIsAFailedScan (0.15s)
+    --- SKIP: TestConnectionLostMidScanIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestConnectionLostMidScanIsAFailedScan/postgres (0.09s)
+    --- PASS: TestConnectionLostMidScanIsAFailedScan/mysql (0.06s)
+=== RUN   TestServerUnreachableIsAFailedScan
+=== RUN   TestServerUnreachableIsAFailedScan/sqlite
+    failure_test.go:83: no server
+=== RUN   TestServerUnreachableIsAFailedScan/postgres
+=== RUN   TestServerUnreachableIsAFailedScan/mysql
+[mysql] 2026/10/17 21:03:33 packets.go:58 unexpected EOF
+--- PASS: TestServerUnreachableIsAFailedScan (0.12s)
+    --- SKIP: TestServerUnreachableIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestServerUnreachableIsAFailedScan/postgres (0.08s)
+    --- PASS: TestServerUnreachableIsAFailedScan/mysql (0.04s)
+=== RUN   TestWrongPasswordIsAFailedScan
+=== RUN   TestWrongPasswordIsAFailedScan/sqlite
+    failure_test.go:112: no passwords
+=== RUN   TestWrongPasswordIsAFailedScan/postgres
+=== RUN   TestWrongPasswordIsAFailedScan/mysql
+--- PASS: TestWrongPasswordIsAFailedScan (0.14s)
+    --- SKIP: TestWrongPasswordIsAFailedScan/sqlite (0.01s)
+    --- PASS: TestWrongPasswordIsAFailedScan/postgres (0.08s)
+    --- PASS: TestWrongPasswordIsAFailedScan/mysql (0.04s)
+=== RUN   TestMissingDSNVariableIsAFailedScan
+=== RUN   TestMissingDSNVariableIsAFailedScan/sqlite
+    failure_test.go:121: no DSN
+=== RUN   TestMissingDSNVariableIsAFailedScan/postgres
+=== RUN   TestMissingDSNVariableIsAFailedScan/mysql
+--- PASS: TestMissingDSNVariableIsAFailedScan (0.12s)
+    --- SKIP: TestMissingDSNVariableIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestMissingDSNVariableIsAFailedScan/postgres (0.08s)
+    --- PASS: TestMissingDSNVariableIsAFailedScan/mysql (0.04s)
+=== RUN   TestSQLiteFileProblemsAreFailedScans
+--- PASS: TestSQLiteFileProblemsAreFailedScans (0.01s)
+=== RUN   TestPostgresRevokedPrivilegesAreNotDrift
+--- PASS: TestPostgresRevokedPrivilegesAreNotDrift (0.12s)
+=== RUN   TestMySQLRevokedPrivilegeIsAFailedScanNotADrop
+--- PASS: TestMySQLRevokedPrivilegeIsAFailedScanNotADrop (0.12s)
+=== RUN   TestSchemaChangingDuringTheScan
+=== RUN   TestSchemaChangingDuringTheScan/sqlite
+=== RUN   TestSchemaChangingDuringTheScan/postgres
+=== RUN   TestSchemaChangingDuringTheScan/mysql
+--- PASS: TestSchemaChangingDuringTheScan (0.33s)
+    --- PASS: TestSchemaChangingDuringTheScan/sqlite (0.02s)
+    --- PASS: TestSchemaChangingDuringTheScan/postgres (0.16s)
+    --- PASS: TestSchemaChangingDuringTheScan/mysql (0.15s)
+=== RUN   TestTimeoutIsAFailedScan
+=== RUN   TestTimeoutIsAFailedScan/sqlite
+=== RUN   TestTimeoutIsAFailedScan/postgres
+=== RUN   TestTimeoutIsAFailedScan/mysql
+--- PASS: TestTimeoutIsAFailedScan (1.36s)
+    --- PASS: TestTimeoutIsAFailedScan/sqlite (0.41s)
+    --- PASS: TestTimeoutIsAFailedScan/postgres (0.49s)
+    --- PASS: TestTimeoutIsAFailedScan/mysql (0.46s)
+=== RUN   TestConnectionStringNeverShowsUpInErrors
+--- PASS: TestConnectionStringNeverShowsUpInErrors (0.00s)
+=== RUN   TestPostgresSessionSettingsAreNotDrift
+--- PASS: TestPostgresSessionSettingsAreNotDrift (0.09s)
+=== RUN   TestMySQLUserWithoutSelectIsRefusedAtBaseline
+--- PASS: TestMySQLUserWithoutSelectIsRefusedAtBaseline (0.05s)
+=== RUN   TestMySQLRevokedTriggerPrivilegeIsAFailedScan
+--- PASS: TestMySQLRevokedTriggerPrivilegeIsAFailedScan (0.11s)
+=== RUN   TestAcceptGetsPastAPrivilegeProbe
+--- PASS: TestAcceptGetsPastAPrivilegeProbe (0.11s)
+=== RUN   TestTooFewTablesIsAFailedScan
+=== RUN   TestTooFewTablesIsAFailedScan/sqlite
+=== RUN   TestTooFewTablesIsAFailedScan/postgres
+=== RUN   TestTooFewTablesIsAFailedScan/mysql
+--- PASS: TestTooFewTablesIsAFailedScan (0.30s)
+    --- PASS: TestTooFewTablesIsAFailedScan/sqlite (0.02s)
+    --- PASS: TestTooFewTablesIsAFailedScan/postgres (0.14s)
+    --- PASS: TestTooFewTablesIsAFailedScan/mysql (0.14s)
+=== RUN   TestConnectionLostMidScanIsAFailedScan
+=== RUN   TestConnectionLostMidScanIsAFailedScan/sqlite
+    failure_test.go:68: no connection
+=== RUN   TestConnectionLostMidScanIsAFailedScan/postgres
+=== RUN   TestConnectionLostMidScanIsAFailedScan/mysql
+[mysql] 2026/10/17 21:03:36 connection.go:803 closing bad idle connection: EOF
+[mysql] 2026/10/17 21:03:36 packets.go:58 unexpected EOF
+--- PASS: TestConnectionLostMidScanIsAFailedScan (0.15s)
+    --- SKIP: TestConnectionLostMidScanIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestConnectionLostMidScanIsAFailedScan/postgres (0.09s)
+    --- PASS: TestConnectionLostMidScanIsAFailedScan/mysql (0.06s)
+=== RUN   TestServerUnreachableIsAFailedScan
+=== RUN   TestServerUnreachableIsAFailedScan/sqlite
+    failure_test.go:83: no server
+=== RUN   TestServerUnreachableIsAFailedScan/postgres
+=== RUN   TestServerUnreachableIsAFailedScan/mysql
+[mysql] 2026/10/17 21:03:36 packets.go:58 unexpected EOF
+--- PASS: TestServerUnreachableIsAFailedScan (0.12s)
+    --- SKIP: TestServerUnreachableIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestServerUnreachableIsAFailedScan/postgres (0.08s)
+    --- PASS: TestServerUnreachableIsAFailedScan/mysql (0.04s)
+=== RUN   TestWrongPasswordIsAFailedScan
+=== RUN   TestWrongPasswordIsAFailedScan/sqlite
+    failure_test.go:112: no passwords
+=== RUN   TestWrongPasswordIsAFailedScan/postgres
+=== RUN   TestWrongPasswordIsAFailedScan/mysql
+--- PASS: TestWrongPasswordIsAFailedScan (0.14s)
+    --- SKIP: TestWrongPasswordIsAFailedScan/sqlite (0.01s)
+    --- PASS: TestWrongPasswordIsAFailedScan/postgres (0.08s)
+    --- PASS: TestWrongPasswordIsAFailedScan/mysql (0.04s)
+=== RUN   TestMissingDSNVariableIsAFailedScan
+=== RUN   TestMissingDSNVariableIsAFailedScan/sqlite
+    failure_test.go:121: no DSN
+=== RUN   TestMissingDSNVariableIsAFailedScan/postgres
+=== RUN   TestMissingDSNVariableIsAFailedScan/mysql
+--- PASS: TestMissingDSNVariableIsAFailedScan (0.12s)
+    --- SKIP: TestMissingDSNVariableIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestMissingDSNVariableIsAFailedScan/postgres (0.08s)
+    --- PASS: TestMissingDSNVariableIsAFailedScan/mysql (0.04s)
+=== RUN   TestSQLiteFileProblemsAreFailedScans
+--- PASS: TestSQLiteFileProblemsAreFailedScans (0.01s)
+=== RUN   TestPostgresRevokedPrivilegesAreNotDrift
+--- PASS: TestPostgresRevokedPrivilegesAreNotDrift (0.12s)
+=== RUN   TestMySQLRevokedPrivilegeIsAFailedScanNotADrop
+--- PASS: TestMySQLRevokedPrivilegeIsAFailedScanNotADrop (0.12s)
+=== RUN   TestSchemaChangingDuringTheScan
+=== RUN   TestSchemaChangingDuringTheScan/sqlite
+=== RUN   TestSchemaChangingDuringTheScan/postgres
+=== RUN   TestSchemaChangingDuringTheScan/mysql
+--- PASS: TestSchemaChangingDuringTheScan (0.33s)
+    --- PASS: TestSchemaChangingDuringTheScan/sqlite (0.02s)
+    --- PASS: TestSchemaChangingDuringTheScan/postgres (0.15s)
+    --- PASS: TestSchemaChangingDuringTheScan/mysql (0.15s)
+=== RUN   TestTimeoutIsAFailedScan
+=== RUN   TestTimeoutIsAFailedScan/sqlite
+=== RUN   TestTimeoutIsAFailedScan/postgres
+=== RUN   TestTimeoutIsAFailedScan/mysql
+--- PASS: TestTimeoutIsAFailedScan (1.35s)
+    --- PASS: TestTimeoutIsAFailedScan/sqlite (0.41s)
+    --- PASS: TestTimeoutIsAFailedScan/postgres (0.49s)
+    --- PASS: TestTimeoutIsAFailedScan/mysql (0.45s)
+=== RUN   TestConnectionStringNeverShowsUpInErrors
+--- PASS: TestConnectionStringNeverShowsUpInErrors (0.00s)
+=== RUN   TestPostgresSessionSettingsAreNotDrift
+--- PASS: TestPostgresSessionSettingsAreNotDrift (0.09s)
+=== RUN   TestMySQLUserWithoutSelectIsRefusedAtBaseline
+--- PASS: TestMySQLUserWithoutSelectIsRefusedAtBaseline (0.05s)
+=== RUN   TestMySQLRevokedTriggerPrivilegeIsAFailedScan
+--- PASS: TestMySQLRevokedTriggerPrivilegeIsAFailedScan (0.12s)
+=== RUN   TestAcceptGetsPastAPrivilegeProbe
+--- PASS: TestAcceptGetsPastAPrivilegeProbe (0.11s)
+=== RUN   TestTooFewTablesIsAFailedScan
+=== RUN   TestTooFewTablesIsAFailedScan/sqlite
+=== RUN   TestTooFewTablesIsAFailedScan/postgres
+=== RUN   TestTooFewTablesIsAFailedScan/mysql
+--- PASS: TestTooFewTablesIsAFailedScan (0.30s)
+    --- PASS: TestTooFewTablesIsAFailedScan/sqlite (0.02s)
+    --- PASS: TestTooFewTablesIsAFailedScan/postgres (0.14s)
+    --- PASS: TestTooFewTablesIsAFailedScan/mysql (0.14s)
+=== RUN   TestConnectionLostMidScanIsAFailedScan
+=== RUN   TestConnectionLostMidScanIsAFailedScan/sqlite
+    failure_test.go:68: no connection
+=== RUN   TestConnectionLostMidScanIsAFailedScan/postgres
+=== RUN   TestConnectionLostMidScanIsAFailedScan/mysql
+[mysql] 2026/10/17 21:03:39 connection.go:803 closing bad idle connection: EOF
+[mysql] 2026/10/17 21:03:39 packets.go:58 unexpected EOF
+--- PASS: TestConnectionLostMidScanIsAFailedScan (0.15s)
+    --- SKIP: TestConnectionLostMidScanIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestConnectionLostMidScanIsAFailedScan/postgres (0.09s)
+    --- PASS: TestConnectionLostMidScanIsAFailedScan/mysql (0.05s)
+=== RUN   TestServerUnreachableIsAFailedScan
+=== RUN   TestServerUnreachableIsAFailedScan/sqlite
+    failure_test.go:83: no server
+=== RUN   TestServerUnreachableIsAFailedScan/postgres
+=== RUN   TestServerUnreachableIsAFailedScan/mysql
+[mysql] 2026/10/17 21:03:39 packets.go:58 unexpected EOF
+--- PASS: TestServerUnreachableIsAFailedScan (0.12s)
+    --- SKIP: TestServerUnreachableIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestServerUnreachableIsAFailedScan/postgres (0.08s)
+    --- PASS: TestServerUnreachableIsAFailedScan/mysql (0.04s)
+=== RUN   TestWrongPasswordIsAFailedScan
+=== RUN   TestWrongPasswordIsAFailedScan/sqlite
+    failure_test.go:112: no passwords
+=== RUN   TestWrongPasswordIsAFailedScan/postgres
+=== RUN   TestWrongPasswordIsAFailedScan/mysql
+--- PASS: TestWrongPasswordIsAFailedScan (0.13s)
+    --- SKIP: TestWrongPasswordIsAFailedScan/sqlite (0.01s)
+    --- PASS: TestWrongPasswordIsAFailedScan/postgres (0.08s)
+    --- PASS: TestWrongPasswordIsAFailedScan/mysql (0.04s)
+=== RUN   TestMissingDSNVariableIsAFailedScan
+=== RUN   TestMissingDSNVariableIsAFailedScan/sqlite
+    failure_test.go:121: no DSN
+=== RUN   TestMissingDSNVariableIsAFailedScan/postgres
+=== RUN   TestMissingDSNVariableIsAFailedScan/mysql
+--- PASS: TestMissingDSNVariableIsAFailedScan (0.12s)
+    --- SKIP: TestMissingDSNVariableIsAFailedScan/sqlite (0.00s)
+    --- PASS: TestMissingDSNVariableIsAFailedScan/postgres (0.08s)
+    --- PASS: TestMissingDSNVariableIsAFailedScan/mysql (0.04s)
+=== RUN   TestSQLiteFileProblemsAreFailedScans
+--- PASS: TestSQLiteFileProblemsAreFailedScans (0.01s)
+=== RUN   TestPostgresRevokedPrivilegesAreNotDrift
+--- PASS: TestPostgresRevokedPrivilegesAreNotDrift (0.12s)
+=== RUN   TestMySQLRevokedPrivilegeIsAFailedScanNotADrop
+--- PASS: TestMySQLRevokedPrivilegeIsAFailedScanNotADrop (0.13s)
+=== RUN   TestSchemaChangingDuringTheScan
+=== RUN   TestSchemaChangingDuringTheScan/sqlite
+=== RUN   TestSchemaChangingDuringTheScan/postgres
+=== RUN   TestSchemaChangingDuringTheScan/mysql
+--- PASS: TestSchemaChangingDuringTheScan (0.33s)
+    --- PASS: TestSchemaChangingDuringTheScan/sqlite (0.02s)
+    --- PASS: TestSchemaChangingDuringTheScan/postgres (0.15s)
+    --- PASS: TestSchemaChangingDuringTheScan/mysql (0.16s)
+=== RUN   TestTimeoutIsAFailedScan
+=== RUN   TestTimeoutIsAFailedScan/sqlite
+=== RUN   TestTimeoutIsAFailedScan/postgres
+=== RUN   TestTimeoutIsAFailedScan/mysql
+--- PASS: TestTimeoutIsAFailedScan (1.35s)
+    --- PASS: TestTimeoutIsAFailedScan/sqlite (0.41s)
+    --- PASS: TestTimeoutIsAFailedScan/postgres (0.49s)
+    --- PASS: TestTimeoutIsAFailedScan/mysql (0.45s)
+=== RUN   TestConnectionStringNeverShowsUpInErrors
+--- PASS: TestConnectionStringNeverShowsUpInErrors (0.00s)
+=== RUN   TestPostgresSessionSettingsAreNotDrift
+--- PASS: TestPostgresSessionSettingsAreNotDrift (0.09s)
+=== RUN   TestMySQLUserWithoutSelectIsRefusedAtBaseline
+--- PASS: TestMySQLUserWithoutSelectIsRefusedAtBaseline (0.06s)
+=== RUN   TestMySQLRevokedTriggerPrivilegeIsAFailedScan
+--- PASS: TestMySQLRevokedTriggerPrivilegeIsAFailedScan (0.12s)
+=== RUN   TestAcceptGetsPastAPrivilegeProbe
+--- PASS: TestAcceptGetsPastAPrivilegeProbe (0.11s)
+PASS
+ok  	github.com/radarmodel/radarmodel/schema	10.235s

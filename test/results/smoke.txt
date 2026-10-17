@@ -1,9 +1,16 @@
-# Smoke test of the built binary, offline
-# recorded 2026-10-17 19:22 UTC with go1.24.13 linux/amd64
-# Linux 6.17.0-1022-azure, INTEL(R) XEON(R) PLATINUM 8573C, 4 CPUs
-# command: sh scripts/smoke.sh /tmp/radarmodel-ai-record
+# Smoke tests of the built binaries, offline
+# recorded 2026-10-17 21:04 UTC with go1.24.0 linux/amd64
+# Linux 6.17.0-1022-azure, AMD EPYC 7763 64-Core Processor, 4 CPUs
+# command: sh -c sh scripts/smoke.sh /tmp/radarmodel-ai-record && sh scripts/smoke-schema.sh /tmp/radarmodel-schema-record
 
-radarmodel-ai 0.1.0
-2026-10-17T19:22:29Z  RadarModel AI: 1 breaking
+radarmodel-ai 0.2.0
+2026-10-17T21:04:13Z  RadarModel AI: 1 breaking
 openai  BREAKING  gpt-4o *  gone (confirmed by a second scan)
 smoke test passed
+radarmodel-schema 0.2.0
+2026-10-17T21:04:15Z  RadarModel Schema: 1 breaking, 2 warnings
+app  BREAKING  column main.customers.name       gone
+app  WARNING   column main.customers.phone      new
+app  WARNING   index main.orders.orders_status  gone
+app            1 more below warning
+schema smoke test passed

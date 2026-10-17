@@ -1,0 +1,21 @@
+# Large schema: 2,000 tables of 8 columns with an index each, on SQLite, Postgres and MySQL
+# recorded 2026-10-17 21:03 UTC with go1.24.0 linux/amd64
+# Linux 6.17.0-1022-azure, AMD EPYC 7763 64-Core Processor, 4 CPUs
+# command: go test -count=1 -v -run ^TestLargeSchema$ -timeout 30m ./schema/
+
+=== RUN   TestLargeSchema
+=== RUN   TestLargeSchema/sqlite
+    large_test.go:36: sqlite: created 2000 tables in 2.256s
+    large_test.go:67: sqlite: 2000 tables, 19990 objects; baseline scan 807ms, scan with one drop 892ms
+=== RUN   TestLargeSchema/postgres
+    large_test.go:36: postgres: created 2000 tables in 5.015s
+    large_test.go:67: postgres: 2000 tables, 23988 objects; baseline scan 411ms, scan with one drop 474ms
+=== RUN   TestLargeSchema/mysql
+    large_test.go:36: mysql: created 2000 tables in 10.057s
+    large_test.go:67: mysql: 2000 tables, 23988 objects; baseline scan 1.609s, scan with one drop 621ms
+--- PASS: TestLargeSchema (30.11s)
+    --- PASS: TestLargeSchema/sqlite (4.80s)
+    --- PASS: TestLargeSchema/postgres (6.59s)
+    --- PASS: TestLargeSchema/mysql (18.71s)
+PASS
+ok  	github.com/radarmodel/radarmodel/schema	30.114s

@@ -1,13 +1,13 @@
 # Live scan of OpenRouter's public model list, twice
-# recorded 2026-10-17 19:22 UTC with go1.24.13 linux/amd64
-# Linux 6.17.0-1022-azure, INTEL(R) XEON(R) PLATINUM 8573C, 4 CPUs
+# recorded 2026-10-17 21:04 UTC with go1.24.0 linux/amd64
+# Linux 6.17.0-1022-azure, AMD EPYC 7763 64-Core Processor, 4 CPUs
 # command: radarmodel-ai check -min info (twice), then show openrouter | head -20
 
-2026-10-17T19:22:29Z  RadarModel AI: no changes
+2026-10-17T21:04:16Z  RadarModel AI: no changes
 openrouter  baseline  470 items recorded; changes are reported from the next scan
-2026-10-17T19:22:29Z  RadarModel AI: no changes
+2026-10-17T21:04:16Z  RadarModel AI: no changes
 openrouter  ok  no changes (470 items)
-openrouter: 470 models, scanned 2026-10-17T19:22:29Z (* = watched)
+openrouter: 470 models, scanned 2026-10-17T21:04:16Z (* = watched)
    aion-labs/aion-2.0                                        context_length=131072 input_price=0.0000008 max_output=32768 name=AionLabs: Aion-2.0 output_price=0.0000016
    aion-labs/aion-3.0                                        context_length=131072 input_price=0.000003 max_output=32768 name=AionLabs: Aion-3.0 output_price=0.000006
    aion-labs/aion-3.0-mini                                   context_length=131072 input_price=0.0000007 max_output=32768 name=AionLabs: Aion-3.0-Mini output_price=0.0000014
