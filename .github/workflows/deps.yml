@@ -24,9 +24,14 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Tidy and commit
+        shell: bash
         run: |
-          go mod tidy
-          go mod verify
+          set -o pipefail
+          # Errors become annotations: job logs can't always be downloaded
+          # from where the repo is worked on.
+          fail() { while IFS= read -r line; do echo "::error title=deps::$line"; done < out.txt; exit 1; }
+          go mod tidy > out.txt 2>&1 || fail
+          go mod verify > out.txt 2>&1 || fail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add go.mod go.sum
@@ -35,4 +40,4 @@ jobs:
             exit 0
           fi
           git commit -m "go mod tidy"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}" > out.txt 2>&1 || fail
