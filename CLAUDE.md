@@ -38,7 +38,7 @@ each new way a list can come back wrong.
 
 ## Agreed plan (October 17, 2026)
 
-1. Core + RadarModel AI, release v0.1.0.  <- in progress
+1. Core + RadarModel AI, release v0.1.0.  <- done (see below)
 2. Site on the standard Launch template: about, contact
    (info@radarmodel.com), quick start, download, reference; posts for the
    launch, the explainer ("models drifting under your app"), how it was
@@ -49,6 +49,21 @@ each new way a list can come back wrong.
    drift; large schema); real databases in CI.
 4. Left out of v1 on purpose: hosted feed and monitoring, API shape radar,
    scanning code for model strings.
+
+## Where it stands (October 17, 2026)
+
+- **v0.1.0 is out**, published by the release workflow from commit fa32afb
+  with five archives and SHA256SUMS. Checked: the Linux archive matches its
+  checksum, prints `radarmodel-ai 0.1.0` and passes `scripts/smoke.sh`.
+- An independent review found four blockers and six should-fixes; all are
+  fixed in 2f4e8ed (second-scan confirmation of removals, name collisions,
+  cross-host redirects, webhook URLs in errors, Anthropic limits and
+  lifecycle, OpenRouter paging, store lock, and more).
+- test/results was recorded on GitHub: every test, race detector, failure
+  tests three times, smoke test, and a live scan of OpenRouter's public list
+  (470 models parsed, second scan no changes).
+- Next: step 2, the site. Waiting for the owner to create the site repo
+  photozeitgeist/radarmodel.com.
 
 ## Working here
 
