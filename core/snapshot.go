@@ -25,7 +25,10 @@ type Snapshot struct {
 	Source  string    `json:"source"`
 	Kind    string    `json:"kind"`
 	TakenAt time.Time `json:"taken_at"`
-	Items   []Item    `json:"items"`
+	// Meta holds facts about the source itself rather than its items, such
+	// as a database server's version. It is never diffed item by item.
+	Meta  map[string]string `json:"meta,omitempty"`
+	Items []Item            `json:"items"`
 }
 
 // Normalize sorts the items by ID and checks that every ID is present and

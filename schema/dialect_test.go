@@ -84,24 +84,31 @@ func sqliteDialect() dialect {
 CREATE TABLE customers (id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE, total REAL NOT NULL CHECK (total >= 0), status TEXT DEFAULT 'new');
 CREATE INDEX orders_status ON orders (status);
-CREATE VIEW big_orders AS SELECT id, total FROM orders WHERE total > 1000;`,
-			"add column":      `ALTER TABLE customers ADD COLUMN phone TEXT`,
-			"drop column":     `ALTER TABLE customers DROP COLUMN name`,
-			"drop index":      `DROP INDEX orders_status`,
-			"add index":       `CREATE INDEX customers_name ON customers (name)`,
-			"drop table":      `DROP VIEW big_orders; DROP TABLE orders`,
-			"add table":       `CREATE TABLE tmp_import (id INTEGER, payload TEXT)`,
-			"change view":     `DROP VIEW big_orders; CREATE VIEW big_orders AS SELECT id, total FROM orders WHERE total > 5000`,
-			"tmp change":      `ALTER TABLE tmp_import ADD COLUMN extra TEXT`,
-			"type change":     "", // SQLite can't change a column type in place
-			"not null":        "",
-			"change default":  "",
-			"many tables":     "CREATE TABLE t%d (id INTEGER PRIMARY KEY, a TEXT, b INTEGER, c REAL, d TEXT NOT NULL DEFAULT 'x', e BLOB, f TEXT, g INTEGER); CREATE INDEX t%[1]d_a ON t%[1]d (a)",
-			"drop many":       "DROP TABLE t%d",
-			"other base":      "",
-			"restrict":        "",
-			"revoke":          "",
-			"probe privilege": "",
+CREATE VIEW big_orders AS SELECT id, total FROM orders WHERE total > 1000;
+CREATE TRIGGER orders_touch BEFORE UPDATE ON orders BEGIN SELECT 1; END;`,
+			"add column":       `ALTER TABLE customers ADD COLUMN phone TEXT`,
+			"drop column":      `ALTER TABLE customers DROP COLUMN name`,
+			"drop index":       `DROP INDEX orders_status`,
+			"add index":        `CREATE INDEX customers_name ON customers (name)`,
+			"drop table":       `DROP VIEW big_orders; DROP TABLE orders`,
+			"add table":        `CREATE TABLE tmp_import (id INTEGER, payload TEXT)`,
+			"change view":      `DROP VIEW big_orders; CREATE VIEW big_orders AS SELECT id, total FROM orders WHERE total > 5000`,
+			"tmp change":       `ALTER TABLE tmp_import ADD COLUMN extra TEXT`,
+			"type change":      "", // SQLite can't change a column type in place
+			"not null":         "",
+			"change default":   "",
+			"many tables":      "CREATE TABLE t%d (id INTEGER PRIMARY KEY, a TEXT, b INTEGER, c REAL, d TEXT NOT NULL DEFAULT 'x', e BLOB, f TEXT, g INTEGER); CREATE INDEX t%[1]d_a ON t%[1]d (a)",
+			"drop many":        "DROP TABLE t%d",
+			"other base":       "",
+			"restrict":         "",
+			"revoke":           "",
+			"probe privilege":  "",
+			"disable trigger":  "",
+			"change check":     "", // only in the CREATE statement, covered by the sql attribute
+			"extend index":     `DROP INDEX orders_status; CREATE INDEX orders_status ON orders (status, total)`,
+			"index order":      `DROP INDEX orders_status; CREATE INDEX orders_status ON orders (status DESC)`,
+			"change trigger":   `DROP TRIGGER orders_touch; CREATE TRIGGER orders_touch BEFORE INSERT ON orders BEGIN SELECT 1; END`,
+			"change collation": "",
 		},
 	}
 }
@@ -131,7 +138,11 @@ func postgresDialect(admin string) dialect {
 			t.Cleanup(func() {
 				db.Close()
 				a, _ := sql.Open("postgres", admin)
-				a.Exec("DROP DATABASE IF EXISTS " + name + " WITH (FORCE)")
+				if _, err := a.Exec("DROP DATABASE IF EXISTS " + name + " WITH (FORCE)"); err != nil {
+					// Postgres 12 has no FORCE.
+					a.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1", name)
+					a.Exec("DROP DATABASE IF EXISTS " + name)
+				}
 				a.Close()
 			})
 			env := "RADAR_TEST_DSN_" + strings.ToUpper(name)
@@ -141,7 +152,7 @@ func postgresDialect(admin string) dialect {
 		ddl: map[string]string{
 			"base": `
 CREATE TABLE customers (id bigserial PRIMARY KEY, email text NOT NULL UNIQUE, name text, created_at timestamptz DEFAULT now());
-CREATE TABLE orders (id bigserial PRIMARY KEY, customer_id bigint REFERENCES customers(id) ON DELETE CASCADE, total numeric(10,2) NOT NULL CHECK (total >= 0), status text DEFAULT 'new');
+CREATE TABLE orders (id bigserial PRIMARY KEY, customer_id bigint REFERENCES customers(id) ON DELETE CASCADE, total numeric(10,2) NOT NULL CONSTRAINT total_positive CHECK (total >= 0), status text DEFAULT 'new');
 CREATE INDEX orders_status ON orders (status);
 CREATE VIEW big_orders AS SELECT id, total FROM orders WHERE total > 1000;
 CREATE FUNCTION touch() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$;
@@ -162,7 +173,13 @@ CREATE TRIGGER orders_touch BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTIO
 			// A role with no privileges on anything in the database.
 			"restrict": `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'radar_reader') THEN CREATE ROLE radar_reader LOGIN PASSWORD 'reader'; END IF; END $$;
 GRANT CONNECT ON DATABASE %s TO radar_reader; GRANT USAGE ON SCHEMA public TO radar_reader; GRANT SELECT ON ALL TABLES IN SCHEMA public TO radar_reader;`,
-			"revoke": `REVOKE ALL ON ALL TABLES IN SCHEMA public FROM radar_reader; REVOKE USAGE ON SCHEMA public FROM radar_reader;`,
+			"revoke":           `REVOKE ALL ON ALL TABLES IN SCHEMA public FROM radar_reader; REVOKE USAGE ON SCHEMA public FROM radar_reader;`,
+			"change check":     `ALTER TABLE orders DROP CONSTRAINT total_positive, ADD CONSTRAINT total_positive CHECK (total > 0)`,
+			"extend index":     `DROP INDEX orders_status; CREATE INDEX orders_status ON orders (status, total)`,
+			"index order":      `DROP INDEX orders_status; CREATE INDEX orders_status ON orders (status DESC)`,
+			"change trigger":   `DROP TRIGGER orders_touch ON orders; CREATE TRIGGER orders_touch BEFORE INSERT OR UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION touch()`,
+			"disable trigger":  `ALTER TABLE orders DISABLE TRIGGER orders_touch`,
+			"change collation": `ALTER TABLE customers ALTER COLUMN name TYPE text COLLATE "C"`,
 		},
 	}
 }
@@ -223,7 +240,13 @@ CREATE TRIGGER orders_touch BEFORE UPDATE ON orders FOR EACH ROW SET NEW.status 
 			"restrict": `CREATE USER IF NOT EXISTS 'radar_reader'@'%%' IDENTIFIED BY 'reader'; CREATE USER IF NOT EXISTS 'radar_reader'@'localhost' IDENTIFIED BY 'reader';
 GRANT SELECT ON %[1]s.customers TO 'radar_reader'@'%%'; GRANT SELECT ON %[1]s.orders TO 'radar_reader'@'%%';
 GRANT SELECT ON %[1]s.customers TO 'radar_reader'@'localhost'; GRANT SELECT ON %[1]s.orders TO 'radar_reader'@'localhost';`,
-			"revoke": `REVOKE SELECT ON %[1]s.orders FROM 'radar_reader'@'%%'; REVOKE SELECT ON %[1]s.orders FROM 'radar_reader'@'localhost';`,
+			"revoke":           `REVOKE SELECT ON %[1]s.orders FROM 'radar_reader'@'%%'; REVOKE SELECT ON %[1]s.orders FROM 'radar_reader'@'localhost';`,
+			"change check":     `ALTER TABLE orders DROP CONSTRAINT total_positive; ALTER TABLE orders ADD CONSTRAINT total_positive CHECK (total > 0)`,
+			"extend index":     `DROP INDEX orders_status ON orders; CREATE INDEX orders_status ON orders (status, total)`,
+			"index order":      `DROP INDEX orders_status ON orders; CREATE INDEX orders_status ON orders (status DESC)`,
+			"change trigger":   `DROP TRIGGER orders_touch; CREATE TRIGGER orders_touch BEFORE INSERT ON orders FOR EACH ROW SET NEW.status = NEW.status`,
+			"disable trigger":  "",
+			"change collation": `ALTER TABLE customers MODIFY name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin`,
 		},
 	}
 }

@@ -88,3 +88,33 @@ func TestSQLiteDSNIsReadOnlyAndNeverCreates(t *testing.T) {
 		t.Fatal("a missing file was accepted")
 	}
 }
+
+func TestIntegerDisplayWidthIsLeftOut(t *testing.T) {
+	for in, want := range map[string]string{
+		"int(11)":                  "int",
+		"bigint(20) unsigned":      "bigint unsigned",
+		"tinyint(1)":               "tinyint",
+		"int":                      "int",
+		"int(5) unsigned zerofill": "int(5) unsigned zerofill",
+		"varchar(20)":              "varchar(20)",
+		"decimal(10,2)":            "decimal(10,2)",
+		"point":                    "point",
+	} {
+		if got := myColumnType(in); got != want {
+			t.Errorf("%s: got %s, want %s", in, got, want)
+		}
+	}
+}
+
+func TestServerUpgradeIsNoted(t *testing.T) {
+	res := core.SourceResult{Source: "db", Changes: []core.Change{{Kind: core.Changed, ID: "column s.t.c", Field: AttrType, Severity: core.Breaking}}}
+	noteUpgrade(&res, "8.0.18", "8.0.18")
+	if len(res.Changes) != 1 {
+		t.Fatal("noted an upgrade that didn't happen")
+	}
+	noteUpgrade(&res, "8.0.18", "8.4.2")
+	if len(res.Changes) != 2 || res.Changes[0].ID != "server" || res.Changes[0].Severity != core.Info ||
+		res.Changes[0].Old != "8.0.18" || res.Changes[0].New != "8.4.2" || res.Changes[1].Note == "" {
+		t.Fatalf("%+v", res.Changes)
+	}
+}

@@ -42,6 +42,7 @@ func sqliteDSN(path string) (string, error) {
 func readSQLite(ctx context.Context, q querier, _ *DatabaseConfig) ([]core.Item, error) {
 	b := newBuilder()
 	var tables []string
+	virtual := map[string]bool{}
 	err := scanRows(ctx, q, `SELECT type, name, tbl_name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite\_%' ESCAPE '\'`, nil,
 		func(r *sql.Rows) error {
 			var typ, name, table string
@@ -56,6 +57,7 @@ func readSQLite(ctx context.Context, q querier, _ *DatabaseConfig) ([]core.Item,
 				kind := "table"
 				if strings.HasPrefix(strings.ToUpper(def), "CREATE VIRTUAL TABLE") {
 					kind = "virtual table"
+					virtual[name] = true
 				}
 				return b.add(KindTable, "main."+name, AttrType, kind, AttrSQL, def)
 			case "view":
@@ -71,6 +73,12 @@ func readSQLite(ctx context.Context, q querier, _ *DatabaseConfig) ([]core.Item,
 		return nil, fmt.Errorf("reading sqlite_master: %w", err)
 	}
 	for _, t := range tables {
+		if virtual[t] {
+			// A virtual table's columns come from its module, which may not
+			// be built into this SQLite (fts4, rtree); its CREATE statement
+			// says everything that can drift.
+			continue
+		}
 		err := scanRows(ctx, q, `SELECT cid, name, type, "notnull", dflt_value, pk, hidden FROM pragma_table_xinfo(?)`, []any{t},
 			func(r *sql.Rows) error {
 				var cid, notNull, pk, hidden int
@@ -122,10 +130,21 @@ func readSQLite(ctx context.Context, q querier, _ *DatabaseConfig) ([]core.Item,
 		if err != nil {
 			return nil, fmt.Errorf("reading the foreign keys of %s: %w", t, err)
 		}
+		// SQLite foreign keys have no names: they are named after their
+		// columns and the table they reference, and in the rare case of two
+		// such keys on the same columns, numbered within that group.
+		base := func(x *fk) string { return "main." + t + ".fk_" + strings.Join(x.from, "_") + "_" + x.table }
+		uses, seen := map[string]int{}, map[string]int{}
+		for _, id := range order {
+			uses[base(fks[id])]++
+		}
 		for _, id := range order {
 			x := fks[id]
-			// SQLite foreign keys have no names; the columns they cover do.
-			path := "main." + t + ".fk_" + strings.Join(x.from, "_")
+			path := base(x)
+			if uses[path] > 1 {
+				seen[path]++
+				path += fmt.Sprintf("_%d", seen[path])
+			}
 			def := fmt.Sprintf("FOREIGN KEY (%s) REFERENCES %s (%s) ON UPDATE %s ON DELETE %s",
 				strings.Join(x.from, ", "), x.table, strings.Join(x.to, ", "), x.onUpdate, x.onDelete)
 			if err := b.add(KindConstraint, path, AttrType, "foreign key", AttrDefinition, def); err != nil {

@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -31,7 +32,21 @@ const (
 	myColumnDenied   = 1143 // ER_COLUMNACCESS_DENIED_ERROR
 	myDBDenied       = 1044 // ER_DBACCESS_DENIED_ERROR
 	mySpecificDenied = 1227 // ER_SPECIFIC_ACCESS_DENIED_ERROR
+	myNoSuchTrigger  = 1360 // ER_TRG_DOES_NOT_EXIST
+	myViewInvalid    = 1356 // ER_VIEW_INVALID: the view exists, but what it reads doesn't
 )
+
+// intWidth matches an integer type's display width. MySQL 8.0.19 stopped
+// printing it, so it is left out everywhere (it changes nothing that's stored
+// unless ZEROFILL is set), and an upgrade isn't reported as type changes.
+var intWidth = regexp.MustCompile(`^(tinyint|smallint|mediumint|int|bigint)\(\d+\)`)
+
+func myColumnType(typ string) string {
+	if strings.Contains(typ, "zerofill") {
+		return typ
+	}
+	return intWidth.ReplaceAllString(typ, "$1")
+}
 
 func myErrno(err error) uint16 {
 	var me *mysql.MySQLError
@@ -130,7 +145,7 @@ FROM information_schema.COLUMNS WHERE TABLE_SCHEMA IN `+in, args, func(r *sql.Ro
 			generated = strings.TrimSpace(generated + " " + g)
 		}
 		return b.add(KindColumn, s+"."+t+"."+c,
-			AttrType, typ, AttrNullable, yesNo(nullable == "YES"), AttrDefault, str(dflt),
+			AttrType, myColumnType(typ), AttrNullable, yesNo(nullable == "YES"), AttrDefault, str(dflt),
 			AttrGenerated, generated, AttrCollation, str(coll), AttrPosition, fmt.Sprint(pos))
 	})
 	if err != nil {
@@ -138,38 +153,59 @@ FROM information_schema.COLUMNS WHERE TABLE_SCHEMA IN `+in, args, func(r *sql.Ro
 	}
 
 	type idx struct {
-		unique bool
-		typ    string
-		cols   []string
+		unique, hidden bool
+		typ            string
+		cols           []string
 	}
-	indexes := map[string]*idx{}
-	err = scanRows(ctx, q, `
-SELECT TABLE_SCHEMA, TABLE_NAME, INDEX_NAME, NON_UNIQUE, COLUMN_NAME, SUB_PART, INDEX_TYPE
+	var indexes map[string]*idx
+	// Sort order, functional index expressions and visibility are read where
+	// the server has them: EXPRESSION and IS_VISIBLE on MySQL 8, IGNORED on
+	// MariaDB 10.6 and later.
+	variants := []string{
+		"COLLATION, EXPRESSION, IS_VISIBLE = 'NO'",
+		"COLLATION, NULL, IGNORED = 'YES'",
+		"COLLATION, NULL, 0",
+	}
+	for i, extra := range variants {
+		indexes = map[string]*idx{}
+		err = scanRows(ctx, q, `
+SELECT TABLE_SCHEMA, TABLE_NAME, INDEX_NAME, NON_UNIQUE, COLUMN_NAME, SUB_PART, INDEX_TYPE, `+extra+`
 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA IN `+in+`
 ORDER BY TABLE_SCHEMA, TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX`, args, func(r *sql.Rows) error {
-		var s, t, n, typ string
-		var nonUnique int
-		var col sql.NullString
-		var sub sql.NullInt64
-		if err := r.Scan(&s, &t, &n, &nonUnique, &col, &sub, &typ); err != nil {
-			return err
+			var s, t, n, typ string
+			var nonUnique int
+			var col, coll, expr sql.NullString
+			var sub sql.NullInt64
+			var hidden sql.NullBool
+			if err := r.Scan(&s, &t, &n, &nonUnique, &col, &sub, &typ, &coll, &expr, &hidden); err != nil {
+				return err
+			}
+			path := s + "." + t + "." + n
+			x := indexes[path]
+			if x == nil {
+				x = &idx{unique: nonUnique == 0, typ: typ, hidden: hidden.Valid && hidden.Bool}
+				indexes[path] = x
+			}
+			c := "(expression)"
+			switch {
+			case col.Valid:
+				c = col.String
+			case expr.Valid:
+				c = "(" + normalize(expr.String) + ")"
+			}
+			if sub.Valid {
+				c += fmt.Sprintf("(%d)", sub.Int64)
+			}
+			if str(coll) == "D" {
+				c += " DESC"
+			}
+			x.cols = append(x.cols, c)
+			return nil
+		})
+		if myErrno(err) != myBadField || i == len(variants)-1 {
+			break
 		}
-		path := s + "." + t + "." + n
-		x := indexes[path]
-		if x == nil {
-			x = &idx{unique: nonUnique == 0, typ: typ}
-			indexes[path] = x
-		}
-		c := "(expression)"
-		if col.Valid {
-			c = col.String
-		}
-		if sub.Valid {
-			c += fmt.Sprintf("(%d)", sub.Int64)
-		}
-		x.cols = append(x.cols, c)
-		return nil
-	})
+	}
 	if err != nil {
 		return nil, fmt.Errorf("reading indexes: %w", err)
 	}
@@ -177,6 +213,9 @@ ORDER BY TABLE_SCHEMA, TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX`, args, func(r *sql.
 		def := x.typ + " (" + strings.Join(x.cols, ", ") + ")"
 		if x.unique {
 			def = "UNIQUE " + def
+		}
+		if x.hidden {
+			def += " INVISIBLE"
 		}
 		if err := b.add(KindIndex, path, AttrDefinition, def); err != nil {
 			return nil, err
@@ -203,23 +242,40 @@ FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA IN `+in, args, func(r *sql
 }
 
 func readMySQLConstraints(ctx context.Context, q querier, in string, args []any, b *builder) error {
+	// MySQL lets constraints of different types share a name on one table (a
+	// UNIQUE key and a FOREIGN KEY both called fk_a, or a CHECK named like a
+	// foreign key), so constraints are keyed by name and type.
 	type con struct {
-		typ, schema, table, name string
-		cols, refCols            []string
-		ref, rules, check        string
+		typ, path               string
+		cols, refCols           []string
+		ref, rules, notEnforced string
 	}
 	cons := map[string]*con{}
-	key := func(s, t, n string) string { return s + "." + t + "." + n }
-	err := scanRows(ctx, q, `
-SELECT CONSTRAINT_SCHEMA, TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE
+	names := map[string]int{}
+	key := func(s, t, n, typ string) string { return s + "." + t + "." + n + "\x00" + typ }
+	var err error
+	for i, enforced := range []string{"ENFORCED", "'YES'"} { // ENFORCED: MySQL 8.0.16 and later
+		cons, names = map[string]*con{}, map[string]int{}
+		err = scanRows(ctx, q, `
+SELECT CONSTRAINT_SCHEMA, TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE, `+enforced+`
 FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN `+in, args, func(r *sql.Rows) error {
-		var s, t, n, typ string
-		if err := r.Scan(&s, &t, &n, &typ); err != nil {
-			return err
+			var s, t, n, typ, enf string
+			if err := r.Scan(&s, &t, &n, &typ, &enf); err != nil {
+				return err
+			}
+			typ = strings.ToLower(typ)
+			x := &con{typ: typ, path: s + "." + t + "." + n}
+			if enf == "NO" {
+				x.notEnforced = " NOT ENFORCED"
+			}
+			cons[key(s, t, n, typ)] = x
+			names[x.path]++
+			return nil
+		})
+		if myErrno(err) != myBadField || i == 1 {
+			break
 		}
-		cons[key(s, t, n)] = &con{typ: strings.ToLower(typ), schema: s, table: t, name: n}
-		return nil
-	})
+	}
 	if err != nil {
 		return fmt.Errorf("reading constraints: %w", err)
 	}
@@ -232,7 +288,14 @@ ORDER BY CONSTRAINT_SCHEMA, TABLE_NAME, CONSTRAINT_NAME, ORDINAL_POSITION`, args
 		if err := r.Scan(&s, &t, &n, &c, &rs, &rt, &rc); err != nil {
 			return err
 		}
-		x := cons[key(s, t, n)]
+		// A row with a referenced table belongs to the foreign key; one
+		// without, to the primary key or unique key of that name.
+		var x *con
+		if rt.Valid {
+			x = cons[key(s, t, n, "foreign key")]
+		} else if x = cons[key(s, t, n, "primary key")]; x == nil {
+			x = cons[key(s, t, n, "unique")]
+		}
 		if x == nil {
 			return nil
 		}
@@ -253,7 +316,7 @@ FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN `+in,
 		if err := r.Scan(&s, &t, &n, &upd, &del); err != nil {
 			return err
 		}
-		if x := cons[key(s, t, n)]; x != nil {
+		if x := cons[key(s, t, n, "foreign key")]; x != nil {
 			x.rules = "ON UPDATE " + upd + " ON DELETE " + del
 		}
 		return nil
@@ -262,7 +325,7 @@ FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN `+in,
 		return fmt.Errorf("reading foreign key rules: %w", err)
 	}
 	// CHECK_CONSTRAINTS has TABLE_NAME on MariaDB, not on MySQL (where check
-	// names are unique per schema), and doesn't exist before MySQL 8.0.16.
+	// names are unique per schema).
 	checks := map[string]string{}
 	err = scanRows(ctx, q, `SELECT CONSTRAINT_SCHEMA, TABLE_NAME, CONSTRAINT_NAME, CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN `+in, args,
 		func(r *sql.Rows) error {
@@ -270,7 +333,7 @@ FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN `+in,
 			if err := r.Scan(&s, &t, &n, &c); err != nil {
 				return err
 			}
-			checks[key(s, t, n)] = c
+			checks[s+"."+t+"."+n] = c
 			return nil
 		})
 	if myErrno(err) == myBadField {
@@ -284,7 +347,7 @@ FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN `+in,
 				return nil
 			})
 	}
-	if err != nil && myErrno(err) != myBadTable {
+	if err != nil {
 		return fmt.Errorf("reading check constraints: %w", err)
 	}
 	keys := make([]string, 0, len(cons))
@@ -297,9 +360,13 @@ FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN `+in,
 		var def string
 		switch x.typ {
 		case "check":
-			c, ok := checks[k]
+			c, ok := checks[x.path]
 			if !ok {
-				c = checks[x.schema+"\x00"+x.name]
+				s, rest, _ := strings.Cut(x.path, ".")
+				c, ok = checks[s+"\x00"+rest[strings.IndexByte(rest, '.')+1:]]
+			}
+			if !ok {
+				return fmt.Errorf("check constraint %s has no clause in information_schema", x.path)
 			}
 			def = "CHECK (" + normalize(c) + ")"
 		case "foreign key":
@@ -307,7 +374,11 @@ FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN `+in,
 		default:
 			def = strings.ToUpper(x.typ) + " (" + strings.Join(x.cols, ", ") + ")"
 		}
-		if err := b.add(KindConstraint, k, AttrType, x.typ, AttrDefinition, strings.TrimSpace(def)); err != nil {
+		path := x.path
+		if names[path] > 1 {
+			path += " (" + x.typ + ")"
+		}
+		if err := b.add(KindConstraint, path, AttrType, x.typ, AttrDefinition, strings.TrimSpace(def)+x.notEnforced); err != nil {
 			return err
 		}
 	}
@@ -339,6 +410,15 @@ func probeMySQL(ctx context.Context, db *sql.DB, removed []string, prev map[stri
 			s, t, _ := strings.Cut(table, ".")
 			c := path[len(table)+1:]
 			query = "SELECT " + myQuote(c) + " FROM " + myQuote(s) + "." + myQuote(t) + " LIMIT 0"
+		case KindTrigger:
+			// information_schema.TRIGGERS only lists triggers the user holds
+			// the TRIGGER privilege on.
+			table := parent(path)
+			if containsID(removed, KindTable+" "+table) {
+				continue
+			}
+			s, _, _ := strings.Cut(table, ".")
+			query = "SHOW CREATE TRIGGER " + myQuote(s) + "." + myQuote(path[len(table)+1:])
 		default:
 			continue
 		}
@@ -348,13 +428,39 @@ func probeMySQL(ctx context.Context, db *sql.DB, removed []string, prev map[stri
 			return fmt.Errorf("%s is missing from information_schema but still answers queries; the user's privileges probably changed, so nothing is reported as dropped", id)
 		}
 		switch myErrno(err) {
-		case myNoSuchTable, myBadField, myBadDB:
+		case myNoSuchTable, myBadField, myBadDB, myNoSuchTrigger:
 			continue // really gone
 		case myTableDenied, myColumnDenied, myDBDenied, mySpecificDenied:
-			return fmt.Errorf("%s is hidden by missing privileges, not dropped (%v); the scan is treated as failed. Grant the user SELECT, or at least SHOW VIEW and REFERENCES, on everything it should watch", id, err)
+			return fmt.Errorf("%s is hidden by missing privileges, not dropped (%v); the scan is treated as failed. Grant the user SELECT, SHOW VIEW and TRIGGER on everything it should watch, or run accept if the change is real", id, err)
 		default:
 			return fmt.Errorf("checking whether %s was dropped: %v", id, err)
 		}
+	}
+	return nil
+}
+
+// checkMySQLSelect makes sure the user can SELECT from every table and view
+// it sees. information_schema lists a table for any privilege on it, but
+// only SELECT lets a later scan tell a dropped table from a hidden one.
+func checkMySQLSelect(ctx context.Context, db *sql.DB, items []core.Item) error {
+	for _, it := range items {
+		kind, path := Split(it.ID)
+		if kind != KindTable && kind != KindView {
+			continue
+		}
+		s, t, _ := strings.Cut(path, ".")
+		rows, err := db.QueryContext(ctx, "SELECT 1 FROM "+myQuote(s)+"."+myQuote(t)+" LIMIT 0")
+		if err == nil {
+			rows.Close()
+			continue
+		}
+		switch myErrno(err) {
+		case myViewInvalid:
+			continue
+		case myTableDenied, myColumnDenied, myDBDenied, mySpecificDenied:
+			return fmt.Errorf("the user can't SELECT from %s; grant it SELECT, SHOW VIEW and TRIGGER on everything it should watch (or ignore %s), so a dropped table can be told apart from a hidden one", path, path)
+		}
+		return fmt.Errorf("checking access to %s: %v", path, err)
 	}
 	return nil
 }

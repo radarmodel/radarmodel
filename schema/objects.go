@@ -32,8 +32,12 @@ const (
 	AttrGenerated  = "generated"  // generated or identity column expression
 	AttrDefinition = "definition" // index, constraint, view or trigger definition
 	AttrEngine     = "engine"     // MySQL storage engine
-	AttrCollation  = "collation"  // MySQL column collation
+	AttrCollation  = "collation"  // column collation (on Postgres, only when not the type's default)
 	AttrSQL        = "sql"        // SQLite CREATE statement of a table
+
+	AttrPartitionOf  = "partition_of"  // Postgres: parent table and bounds of a partition
+	AttrPartitionKey = "partition_key" // Postgres: how a partitioned table is split
+	AttrRowSecurity  = "row_security"  // Postgres: "on" or "forced"
 )
 
 // querier is what readers need: a transaction or a connection.

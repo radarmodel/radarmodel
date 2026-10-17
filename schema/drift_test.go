@@ -18,6 +18,10 @@ func TestBaselineThenNoChanges(t *testing.T) {
 		if !res.Baseline || res.Error != "" || res.Items < 10 {
 			t.Fatalf("baseline: %+v", res)
 		}
+		// The server's version is kept, so an upgrade can be told apart.
+		if s, _ := h.store.Latest("db"); (d.name == "sqlite") != (s.Meta["server"] == "") {
+			t.Fatalf("server version %q stored for %s", s.Meta["server"], d.name)
+		}
 		for i := 0; i < 2; i++ {
 			r = h.run(Options{})
 			if res := h.result(r); res.Error != "" || len(res.Changes) != 0 || res.Baseline {
@@ -45,6 +49,12 @@ func TestManualChangesAreCaught(t *testing.T) {
 		{"type change", KindColumn, AttrType, "customers.email", core.Changed, core.Breaking},
 		{"not null", KindColumn, AttrNullable, "customers.name", core.Changed, core.Breaking},
 		{"change default", KindColumn, AttrDefault, "orders.status", core.Changed, core.Warning},
+		{"change check", KindConstraint, AttrDefinition, "orders.total_positive", core.Changed, core.Warning},
+		{"extend index", KindIndex, AttrDefinition, "orders.orders_status", core.Changed, core.Warning},
+		{"index order", KindIndex, AttrDefinition, "orders.orders_status", core.Changed, core.Warning},
+		{"change trigger", KindTrigger, AttrDefinition, "orders.orders_touch", core.Changed, core.Warning},
+		{"disable trigger", KindTrigger, AttrDefinition, "orders.orders_touch", core.Changed, core.Warning},
+		{"change collation", KindColumn, AttrCollation, "customers.name", core.Changed, core.Warning},
 	}
 	eachDialect(t, func(t *testing.T, d dialect) {
 		for _, c := range cases {

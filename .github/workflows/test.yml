@@ -87,12 +87,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mysql: ['mysql:8.4', 'mariadb:11.4']
+        # Every version the README names, oldest and newest of each, paired up.
+        include:
+          - {postgres: '12', mysql: 'mysql:8.0'}
+          - {postgres: '16', mysql: 'mariadb:10.6'}
+          - {postgres: '17', mysql: 'mysql:8.4'}
+          - {postgres: '16', mysql: 'mariadb:11.4'}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
       postgres:
-        image: postgres:16
+        image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
@@ -117,7 +122,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Schema tests against Postgres 16 and ${{ matrix.mysql }}
+      - name: Schema tests against Postgres ${{ matrix.postgres }} and ${{ matrix.mysql }}
         shell: bash
         run: |
           set -o pipefail

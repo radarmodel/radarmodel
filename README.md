@@ -267,10 +267,14 @@ prod  WARNING   index public.orders.orders_status  gone
 - **databases.** `driver` is `postgres`, `mysql` (MySQL or MariaDB) or
   `sqlite`. Connection strings carry passwords, so they come from the
   environment variable `dsn_env` names: a URL or keyword string for Postgres
-  (`lib/pq`), `user:pass@tcp(host:3306)/dbname` for MySQL. SQLite takes a
-  `path`, relative to the config file.
+  (`lib/pq`), `user:pass@tcp(host:3306)/dbname` for MySQL. They never appear
+  in output or alerts; one that can't be parsed is reported as
+  `DSN_ENV: invalid connection string`. SQLite takes a `path`, relative to the
+  config file.
 - **schemas.** Postgres watches every schema but the system ones unless you
-  list some; MySQL watches the connection's database unless you list some.
+  list some, and leaves out objects that belong to an extension (an extension
+  upgrade isn't drift in your schema). MySQL watches the connection's
+  database unless you list some.
 - **ignore.** Globs on qualified names, per database or for all: `*` matches
   anything, dots included. A pattern that matches a table covers everything
   in it. Adding an ignore rule never shows up as objects being dropped.
@@ -297,7 +301,9 @@ prod  WARNING   index public.orders.orders_status  gone
 | A column's default, generated expression or collation changed, or it became nullable | warning |
 | A view's definition changed | warning |
 | A table's storage engine or kind changed | warning |
+| A partition attached or detached, row-level security switched | warning |
 | A column's position changed | info |
+| The server's version changed | info |
 | Anything inside a table that was itself added or dropped | info |
 
 ### What a failed scan is
@@ -316,15 +322,38 @@ snapshot left as it was:
 - too few tables (`min_fraction`)
 - on MySQL, objects hidden by a revoked privilege. MySQL's
   `information_schema` only lists what the user can access, so before any
-  table or column is reported as dropped, RadarModel Schema queries it: "doesn't
-  exist" is a drop, "access denied" is a failed scan
+  table, column or trigger is reported as dropped, RadarModel Schema queries
+  it: "doesn't exist" is a drop, "access denied" is a failed scan. If the
+  change is real and you'd rather not restore the privilege,
+  `radarmodel-schema accept DB` takes the schema as it is now
 
 Postgres is read from `pg_catalog`, which lists every object whatever the
-user's privileges, so revoking a GRANT there changes nothing at all.
+user's privileges, so revoking a GRANT there changes nothing at all. Each
+read sets its own `search_path`, `IntervalStyle` and `DateStyle`, so a role
+or connection string with other settings doesn't change how definitions
+read.
 
 The user needs to read the catalog only. On Postgres, any role that can
-connect is enough. On MySQL, give it `SELECT` (or at least `SHOW VIEW` and
-`REFERENCES`) on what it should watch.
+connect is enough. On MySQL, give it `SELECT`, `SHOW VIEW` and `TRIGGER` on
+what it should watch:
+
+```sql
+GRANT SELECT, SHOW VIEW, TRIGGER ON app.* TO 'radar'@'%';
+```
+
+Without `SELECT`, a dropped table can't be told apart from a hidden one, so
+the first scan checks that every table can be read and fails if one can't.
+`TRIGGER` is what lets MySQL show the triggers at all.
+
+A server upgrade can change how types and definitions are printed. The
+server's version is stored with each snapshot; when it changes, the report
+says so and notes it on every other change found in that scan. MySQL's
+integer display widths (`int(11)`), which 8.0.19 stopped printing, are left
+out everywhere.
+
+SQLite in WAL mode keeps a `-wal` and a `-shm` file next to the database.
+Reading it creates them if they're missing, so the folder has to be
+writable, even though the database itself is opened read-only.
 
 ### Commands
 
@@ -342,30 +371,38 @@ radarmodel-schema version
 `diff` compares two configured databases right now, such as staging against
 production, and exits 0 when they match and 1 when they don't. When each
 side uses a single schema with different names (`app_staging` and `app`), the
-names are lined up first. `watch` alerts about the same drift once, and
+names are lined up first. Comparing a MySQL database with a MariaDB one
+shows differences in how defaults are quoted (MariaDB prints `NULL` for no
+default, and quotes string defaults); compare like with like. `watch` alerts about the same drift once, and
 again only when it changes.
 
 ### What it reads
 
 | | Tables and views | Columns | Indexes | Constraints | Triggers |
 |---|---|---|---|---|---|
-| Postgres 12 and later (`pg_catalog`) | kind, view definition | type, NOT NULL, default, generated or identity, position | full definition | primary key, unique, foreign key, check, exclusion | definition |
-| MySQL 8, MariaDB 10.2 and later (`information_schema`) | kind, engine, view definition | type, NULL, default, extra and generated expression, collation, position | unique, method, columns | primary key, unique, foreign key with rules, check | timing, event, statement |
+| Postgres 12 to 17 (`pg_catalog`) | kind, view definition, partition bounds and key, row-level security | type, NOT NULL, default, generated or identity, collation, position | full definition | primary key, unique, foreign key, check, exclusion | definition, enabled or disabled |
+| MySQL 8.0 and 8.4, MariaDB 10.6 and later (`information_schema`) | kind, engine, view definition | type, NULL, default, extra and generated expression, collation, position | unique, method, columns with order, expressions, visibility | primary key, unique, foreign key with rules, check, enforcement | timing, event, statement |
 | SQLite (`sqlite_master` and pragmas) | kind, CREATE statement | type, NOT NULL, default, generated, position | CREATE statement | foreign keys | CREATE statement |
 
 SQLite keeps CHECK constraints only in the CREATE TABLE statement; a change
-there shows as the table's `sql` changing.
+there shows as the table's `sql` changing. Its foreign keys have no names, so
+they're named after their columns and the table they reference
+(`main.orders.fk_customer_id_customers`). A virtual table is recorded by its
+CREATE statement only. MySQL lets a unique key and a foreign key share a
+name; when two constraints on a table do, their type is added to the name
+(`app.orders.fk_a (unique)`).
 
 ## How it was tested
 
 RadarModel Schema's tests run against real databases: SQLite on Linux, macOS
-and Windows, and Postgres 16, MySQL 8.4 and MariaDB 11.4 in containers on
-every push. Every kind of manual change above is made for real and has to be
+and Windows, and Postgres 12, 16 and 17, MySQL 8.0 and 8.4, and MariaDB
+10.6 and 11.4 in containers on every push. Every kind of manual change above is made for real and has to be
 reported at the right severity, once. The failure tests lose the connection
 in the middle of a scan, stop the server, use a wrong password, move and
 corrupt the SQLite file, run a migration between the two reads, revoke
-privileges on Postgres and MySQL, and drop most of the tables; none of them
-may be reported as drift. A large-schema test scans 2,000 tables of eight
+privileges on Postgres and MySQL (tables and triggers), scan Postgres under
+other session settings, and drop most of the tables; none of them may be
+reported as drift, and no password may appear in an error. A large-schema test scans 2,000 tables of eight
 columns and an index each.
 
 For RadarModel AI, the tests cover the commands, the four providers, the
