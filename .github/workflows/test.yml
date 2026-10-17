@@ -8,6 +8,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Also by hand on any branch:
+  #   gh api -X POST repos/radarmodel/radarmodel/actions/workflows/test.yml/dispatches -f ref=BRANCH
+  workflow_dispatch:
 
 permissions:
   contents: read
