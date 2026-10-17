@@ -154,6 +154,10 @@ func TestReportText(t *testing.T) {
 	if h := Headline(r, Info); h != "P: 1 breaking, 1 info, 1 source(s) failed to scan" {
 		t.Errorf("headline %q", h)
 	}
+	r.Results[0].Changes = append(r.Results[0].Changes, Change{Severity: Warning}, Change{Severity: Warning})
+	if h := Headline(r, Warning); h != "P: 1 breaking, 2 warnings, 1 source(s) failed to scan" {
+		t.Errorf("headline %q", h)
+	}
 }
 
 func TestFetchRedactsKeys(t *testing.T) {

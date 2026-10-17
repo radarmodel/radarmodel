@@ -16,4 +16,4 @@ package radarmodel
 
 // Version is the release version. Raising it on main publishes a release; see
 // RELEASING.md.
-const Version = "0.1.0"
+const Version = "0.1.1"

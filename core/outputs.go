@@ -146,8 +146,12 @@ func Headline(r *Report, min Severity) string {
 	}
 	var parts []string
 	for _, s := range []Severity{Breaking, Warning, Info} {
-		if counts[s] > 0 {
-			parts = append(parts, fmt.Sprintf("%d %s", counts[s], s))
+		if n := counts[s]; n > 0 {
+			name := s.String()
+			if s == Warning && n > 1 {
+				name = "warnings"
+			}
+			parts = append(parts, fmt.Sprintf("%d %s", n, name))
 		}
 	}
 	if n := r.Errors(); n > 0 {
