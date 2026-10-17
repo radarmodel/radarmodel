@@ -11,17 +11,21 @@ it saw, and warns you about the models you actually use.
 
 RadarModel is two products on one engine:
 
-- **RadarModel AI** (`radarmodel-ai`, available now) watches the model lists
-  of OpenAI, Anthropic, Google and OpenRouter.
-- **RadarModel Schema** (coming next) watches database schemas for drift.
+- **RadarModel AI** (`radarmodel-ai`) watches the model lists of OpenAI,
+  Anthropic, Google and OpenRouter.
+- **RadarModel Schema** (`radarmodel-schema`) watches Postgres, MySQL and
+  SQLite schemas for drift: tables, columns, indexes, constraints, views and
+  triggers changed outside your migrations.
 
-Both are single binaries with no dependencies, under the Apache License 2.0.
+Both are single binaries that need nothing else installed, under the Apache
+License 2.0. This README covers RadarModel AI first;
+[RadarModel Schema](#radarmodel-schema) has its own section below.
 
 ## Install
 
 Download the archive for your system from the
 [latest release](https://github.com/radarmodel/radarmodel/releases/latest),
-unpack it, and put `radarmodel-ai` on your PATH:
+unpack it, and put `radarmodel-ai` and `radarmodel-schema` on your PATH:
 
 | System | File |
 |---|---|
@@ -31,7 +35,12 @@ unpack it, and put `radarmodel-ai` on your PATH:
 | macOS, Intel | radarmodel_darwin_amd64.tar.gz |
 | Windows, x86-64 | radarmodel_windows_amd64.zip |
 
-Or build it with Go: `go install github.com/radarmodel/radarmodel/cmd/radarmodel-ai@latest`
+Or build them with Go:
+
+```sh
+go install github.com/radarmodel/radarmodel/cmd/radarmodel-ai@latest
+go install github.com/radarmodel/radarmodel/cmd/radarmodel-schema@latest
+```
 
 ## Quick start
 
@@ -208,10 +217,160 @@ provider exits 1, and the report shows both. Use it as a CI gate.
 warning for a given model once rather than every interval, and again only if
 the model comes back and later goes missing again.
 
+## RadarModel Schema
+
+Someone runs an `ALTER TABLE` by hand during an incident. An ORM auto-migrates
+in one environment. A hotfix drops an index. The database no longer matches
+what the code and the migrations say, and the first sign is a failed deploy
+or a slow query weeks later. `radarmodel-schema` reads the live schema,
+compares it with the last scan or an accepted baseline, and reports the
+drift. It needs no migration tool: point it at a database and it records
+what's there.
+
+### Quick start
+
+```sh
+radarmodel-schema init          # writes radarmodel-schema.json
+export PROD_DATABASE_URL='postgres://radar@db.example.com/app?sslmode=require'
+radarmodel-schema check         # first run records a baseline
+radarmodel-schema check         # later runs report drift
+```
+
+```
+2026-10-17T19:50:36Z  RadarModel Schema: 2 breaking, 2 warnings
+prod  BREAKING  column public.customers.name       nullable yes -> no (inserts without it now fail)
+prod  WARNING   column public.customers.phone      new
+prod  BREAKING  column public.orders.status        type text -> character varying(30)
+prod  WARNING   index public.orders.orders_status  gone
+```
+
+### Configuration
+
+`radarmodel-schema.json`, or the file in `$RADARMODEL_SCHEMA_CONFIG`, or
+`-config FILE`:
+
+```json
+{
+  "interval": "1h",
+  "timeout": "2m",
+  "min_fraction": 0.5,
+  "ignore": ["*.tmp_*"],
+  "databases": [
+    {"name": "prod", "driver": "postgres", "dsn_env": "PROD_DATABASE_URL", "schemas": ["public", "billing"]},
+    {"name": "app", "driver": "mysql", "dsn_env": "APP_MYSQL_DSN", "baseline": "pinned"},
+    {"name": "local", "driver": "sqlite", "path": "app.db", "ignore": ["main.sessions"]}
+  ],
+  "alerts": {"min_severity": "warning", "slack": {"url_env": "SLACK_WEBHOOK_URL"}}
+}
+```
+
+- **databases.** `driver` is `postgres`, `mysql` (MySQL or MariaDB) or
+  `sqlite`. Connection strings carry passwords, so they come from the
+  environment variable `dsn_env` names: a URL or keyword string for Postgres
+  (`lib/pq`), `user:pass@tcp(host:3306)/dbname` for MySQL. SQLite takes a
+  `path`, relative to the config file.
+- **schemas.** Postgres watches every schema but the system ones unless you
+  list some; MySQL watches the connection's database unless you list some.
+- **ignore.** Globs on qualified names, per database or for all: `*` matches
+  anything, dots included. A pattern that matches a table covers everything
+  in it. Adding an ignore rule never shows up as objects being dropped.
+- **baseline.** `rolling` (the default) compares each scan with the one
+  before, so each change is reported once. `pinned` compares every scan with
+  an accepted baseline, so drift is reported on every run until
+  `radarmodel-schema accept DB` takes the current schema as the new baseline.
+- **min_fraction.** In a schema of 10 or more tables and views, a scan
+  finding fewer than this share of them is a failed scan, not a mass drop:
+  usually a connection string pointing at the wrong database. `0` turns it
+  off.
+- **timeout** bounds a whole scan of one database. **interval**,
+  **state_dir** and **alerts** work as for RadarModel AI.
+
+### What counts as what
+
+| Change | Severity |
+|---|---|
+| A table, view or column dropped | breaking |
+| A column's type changed | breaking |
+| A column became NOT NULL | breaking |
+| A new table, view, column, index, constraint or trigger | warning |
+| An index, constraint or trigger dropped or redefined | warning |
+| A column's default, generated expression or collation changed, or it became nullable | warning |
+| A view's definition changed | warning |
+| A table's storage engine or kind changed | warning |
+| A column's position changed | info |
+| Anything inside a table that was itself added or dropped | info |
+
+### What a failed scan is
+
+Nothing is reported as drift because the connection, the server or the
+user's privileges misbehaved. These are failed scans, with the stored
+snapshot left as it was:
+
+- a lost connection, an unreachable server, a wrong password, a missing
+  `dsn_env` variable, or a scan longer than `timeout`
+- a SQLite file that's missing, isn't a database, or is a folder. The file is
+  opened read-only, so a wrong path never creates an empty database
+- a schema that keeps changing while it's read: every scan reads the schema
+  twice and only accepts two identical reads, so a migration running during
+  the scan can't produce a half-changed snapshot
+- too few tables (`min_fraction`)
+- on MySQL, objects hidden by a revoked privilege. MySQL's
+  `information_schema` only lists what the user can access, so before any
+  table or column is reported as dropped, RadarModel Schema queries it: "doesn't
+  exist" is a drop, "access denied" is a failed scan
+
+Postgres is read from `pg_catalog`, which lists every object whatever the
+user's privileges, so revoking a GRANT there changes nothing at all.
+
+The user needs to read the catalog only. On Postgres, any role that can
+connect is enough. On MySQL, give it `SELECT` (or at least `SHOW VIEW` and
+`REFERENCES`) on what it should watch.
+
+### Commands
+
+```
+radarmodel-schema init   [-config FILE]                  write a starter config
+radarmodel-schema check  [-config FILE] [flags] [DB...]  scan, compare, report
+radarmodel-schema watch  [-config FILE] [flags]          scan every interval until stopped
+radarmodel-schema accept [-config FILE] DB...            take the current schema as the baseline
+radarmodel-schema diff   [-config FILE] DB1 DB2          compare two databases now
+radarmodel-schema show   [-config FILE] DB               list the stored objects of a database
+radarmodel-schema version
+```
+
+`check` takes the same flags and exit codes as `radarmodel-ai check`.
+`diff` compares two configured databases right now, such as staging against
+production, and exits 0 when they match and 1 when they don't. When each
+side uses a single schema with different names (`app_staging` and `app`), the
+names are lined up first. `watch` alerts about the same drift once, and
+again only when it changes.
+
+### What it reads
+
+| | Tables and views | Columns | Indexes | Constraints | Triggers |
+|---|---|---|---|---|---|
+| Postgres 12 and later (`pg_catalog`) | kind, view definition | type, NOT NULL, default, generated or identity, position | full definition | primary key, unique, foreign key, check, exclusion | definition |
+| MySQL 8, MariaDB 10.2 and later (`information_schema`) | kind, engine, view definition | type, NULL, default, extra and generated expression, collation, position | unique, method, columns | primary key, unique, foreign key with rules, check | timing, event, statement |
+| SQLite (`sqlite_master` and pragmas) | kind, CREATE statement | type, NOT NULL, default, generated, position | CREATE statement | foreign keys | CREATE statement |
+
+SQLite keeps CHECK constraints only in the CREATE TABLE statement; a change
+there shows as the table's `sql` changing.
+
 ## How it was tested
 
-The tests cover the commands, the four providers, the severity rules and the
-alert outputs, and the failure tests aim at the main promise. A fake API
+RadarModel Schema's tests run against real databases: SQLite on Linux, macOS
+and Windows, and Postgres 16, MySQL 8.4 and MariaDB 11.4 in containers on
+every push. Every kind of manual change above is made for real and has to be
+reported at the right severity, once. The failure tests lose the connection
+in the middle of a scan, stop the server, use a wrong password, move and
+corrupt the SQLite file, run a migration between the two reads, revoke
+privileges on Postgres and MySQL, and drop most of the tables; none of them
+may be reported as drift. A large-schema test scans 2,000 tables of eight
+columns and an index each.
+
+For RadarModel AI, the tests cover the commands, the four providers, the
+severity rules and the alert outputs, and the failure tests aim at the main
+promise. A fake API
 serving all four providers is made to fail in every way listed above, and
 each test checks that the failure is reported as an error, that no change is
 reported, that the stored snapshot is byte-for-byte the same, and that the
@@ -224,8 +383,9 @@ Every run takes a snapshot of each provider's list: model IDs plus the
 properties that matter (display name, limits, prices, retirement date). It
 compares the snapshot with the stored one, classifies each difference, sends
 the report to the terminal and the alert outputs, and stores the new snapshot.
-The engine in `core` doesn't know about AI models; RadarModel Schema will use
-the same snapshot, diff, store and alert code for database schemas.
+The engine in `core` doesn't know about AI models or databases: RadarModel
+Schema uses the same snapshot, diff, store and alert code, with objects such
+as `column public.users.email` instead of models.
 
 ## License
 

@@ -7,7 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,12 +32,11 @@ func sqliteDSN(path string) (string, error) {
 	if !info.Mode().IsRegular() {
 		return "", fmt.Errorf("%s is not a regular file", abs)
 	}
-	p := filepath.ToSlash(abs)
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p // Windows: file:///C:/...
-	}
-	u := url.URL{Scheme: "file", Path: p, RawQuery: "mode=ro&_pragma=busy_timeout(5000)"}
-	return u.String(), nil
+	// "file:" plus the path with forward slashes: file:/srv/app.db, or
+	// file:C:/data/app.db on Windows. Characters with a meaning in a URI are
+	// escaped.
+	p := strings.NewReplacer("%", "%25", "?", "%3F", "#", "%23").Replace(filepath.ToSlash(abs))
+	return "file:" + p + "?mode=ro&_pragma=busy_timeout(5000)", nil
 }
 
 func readSQLite(ctx context.Context, q querier, _ *DatabaseConfig) ([]core.Item, error) {

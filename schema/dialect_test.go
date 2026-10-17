@@ -160,7 +160,7 @@ CREATE TRIGGER orders_touch BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTIO
 			"many tables":    "CREATE TABLE t%d (id bigint PRIMARY KEY, a text, b int, c float8, d text NOT NULL DEFAULT 'x', e bytea, f text, g int); CREATE INDEX t%[1]d_a ON t%[1]d (a)",
 			"drop many":      "DROP TABLE t%d",
 			// A role with no privileges on anything in the database.
-			"restrict": `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'radar_reader') THEN CREATE ROLE radar_reader LOGIN; END IF; END $$;
+			"restrict": `DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'radar_reader') THEN CREATE ROLE radar_reader LOGIN PASSWORD 'reader'; END IF; END $$;
 GRANT CONNECT ON DATABASE %s TO radar_reader; GRANT USAGE ON SCHEMA public TO radar_reader; GRANT SELECT ON ALL TABLES IN SCHEMA public TO radar_reader;`,
 			"revoke": `REVOKE ALL ON ALL TABLES IN SCHEMA public FROM radar_reader; REVOKE USAGE ON SCHEMA public FROM radar_reader;`,
 		},

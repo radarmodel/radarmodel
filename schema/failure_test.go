@@ -176,13 +176,15 @@ func TestPostgresRevokedPrivilegesAreNotDrift(t *testing.T) {
 	h.exec("base")
 	h.exec("restrict", h.dbName())
 	u, _ := url.Parse(os.Getenv(h.db.DSNEnv))
-	u.User = url.User("radar_reader")
+	u.User = url.UserPassword("radar_reader", "reader")
 	t.Setenv(h.db.DSNEnv, u.String())
-	h.run(Options{})
+	if r := h.run(Options{}); h.result(r).Error != "" {
+		t.Fatalf("baseline as the restricted role: %s", h.result(r).Error)
+	}
 	h.exec("revoke")
 	r := h.run(Options{})
 	if res := h.result(r); res.Error != "" || len(res.Changes) != 0 {
-		t.Fatalf("revoking privileges showed up as drift:\n%s", dump(r))
+		t.Fatalf("revoking privileges showed up as drift: %q %s", res.Error, strings.ReplaceAll(dump(r), "\n", " | "))
 	}
 	// Real drift is still seen by the restricted user.
 	h.exec("drop column")

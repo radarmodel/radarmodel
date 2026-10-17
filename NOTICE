@@ -3,6 +3,11 @@ Copyright radarmodel.com 2026
 
 This product includes software developed at radarmodel.com (https://radarmodel.com).
 
-The radarmodel-ai command and its ready-built binaries also contain the Go
-runtime and standard library. Its license is listed in
-THIRD_PARTY_LICENSES.md, and the full text ships in every release archive.
+The radarmodel-schema command and its ready-built binaries also contain
+third-party modules: lib/pq, go-sql-driver/mysql (Mozilla Public License 2.0,
+source at https://github.com/go-sql-driver/mysql), filippo.io/edwards25519,
+ncruces/go-sqlite3 with SQLite (in the public domain), ncruces/julianday,
+tetratelabs/wazero (Apache License 2.0; its NOTICE reads "wazero, Copyright
+2020-2023 wazero authors") and golang.org/x/sys. Both commands contain the Go
+runtime and standard library. Their licenses are listed in
+THIRD_PARTY_LICENSES.md, and the full texts ship in every release archive.

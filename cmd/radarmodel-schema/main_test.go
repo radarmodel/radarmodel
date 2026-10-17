@@ -55,7 +55,7 @@ CREATE INDEX users_email ON users (email);`); err != nil {
 func TestCheckExitCodes(t *testing.T) {
 	cfg, app, _ := setup(t, "")
 	if code, out, errs := call("check", "-config", cfg); code != core.ExitOK || !strings.Contains(out, "baseline") {
-		t.Fatalf("baseline: %d\n%s%s", code, out, errs)
+		t.Fatalf("baseline: %d %q %q", code, out, errs)
 	}
 	if code, _, _ := call("check", "-config", cfg); code != core.ExitOK {
 		t.Fatalf("unchanged: exit %d", code)
@@ -81,7 +81,7 @@ func TestPinnedAndAccept(t *testing.T) {
 	app.Exec("DROP INDEX users_email")
 	for i := 0; i < 2; i++ {
 		if code, out, _ := call("check", "-config", cfg, "app"); code != core.ExitOK || !strings.Contains(out, "users_email") {
-			t.Fatalf("pinned run %d: %d\n%s", i, code, out)
+			t.Fatalf("pinned run %d: %d %q", i, code, out)
 		}
 	}
 	if code, out, errs := call("accept", "-config", cfg, "app"); code != core.ExitOK || !strings.Contains(out, "accepted") {
@@ -95,7 +95,7 @@ func TestPinnedAndAccept(t *testing.T) {
 func TestDiff(t *testing.T) {
 	cfg, _, staging := setup(t, "")
 	if code, out, _ := call("diff", "-config", cfg, "app", "staging"); code != 0 || !strings.Contains(out, "no changes") {
-		t.Fatalf("same schemas: %d\n%s", code, out)
+		t.Fatalf("same schemas: %d %q", code, out)
 	}
 	staging.Exec("ALTER TABLE users ADD COLUMN phone TEXT")
 	code, out, _ := call("diff", "-config", cfg, "app", "staging")
