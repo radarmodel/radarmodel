@@ -1,0 +1,151 @@
+# Failure tests: provider and network faults must never be reported as removed models, three runs
+# recorded 2026-10-17 19:22 UTC with go1.24.13 linux/amd64
+# Linux 6.17.0-1022-azure, INTEL(R) XEON(R) PLATINUM 8573C, 4 CPUs
+# command: go test -count=3 -v -run ^(TestFailuresAreNeverReportedAsRemovals|TestTransientFailuresAreRetried|TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline|TestCancelledRunLeavesSnapshotsAlone|TestOpenRouterPagingIsAFailedScan|TestSilentlyShortListOnlyWarnsOnce|TestAModelBackAfterOneMissIsNotARemoval|TestFailedSaveKeepsTheOldSnapshot)$ ./ai/
+
+=== RUN   TestFailuresAreNeverReportedAsRemovals
+=== RUN   TestFailuresAreNeverReportedAsRemovals/server_error_on_every_attempt
+=== RUN   TestFailuresAreNeverReportedAsRemovals/rate_limited_on_every_attempt
+=== RUN   TestFailuresAreNeverReportedAsRemovals/maintenance_page_with_status_200
+=== RUN   TestFailuresAreNeverReportedAsRemovals/body_cut_off_mid-list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/error_object_with_status_200
+=== RUN   TestFailuresAreNeverReportedAsRemovals/empty_list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/null_list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/second_page_fails
+=== RUN   TestFailuresAreNeverReportedAsRemovals/last_page_fails
+=== RUN   TestFailuresAreNeverReportedAsRemovals/has_more_with_no_cursor
+=== RUN   TestFailuresAreNeverReportedAsRemovals/page_token_that_never_changes
+=== RUN   TestFailuresAreNeverReportedAsRemovals/list_suddenly_mostly_empty
+=== RUN   TestFailuresAreNeverReportedAsRemovals/wrong_type_for_a_field
+=== RUN   TestFailuresAreNeverReportedAsRemovals/server_too_slow
+--- PASS: TestFailuresAreNeverReportedAsRemovals (6.62s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/server_error_on_every_attempt (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/rate_limited_on_every_attempt (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/maintenance_page_with_status_200 (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/body_cut_off_mid-list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/error_object_with_status_200 (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/empty_list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/null_list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/second_page_fails (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/last_page_fails (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/has_more_with_no_cursor (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/page_token_that_never_changes (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/list_suddenly_mostly_empty (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/wrong_type_for_a_field (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/server_too_slow (6.51s)
+=== RUN   TestTransientFailuresAreRetried
+--- PASS: TestTransientFailuresAreRetried (0.01s)
+=== RUN   TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline
+--- PASS: TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline (0.01s)
+=== RUN   TestCancelledRunLeavesSnapshotsAlone
+--- PASS: TestCancelledRunLeavesSnapshotsAlone (0.00s)
+=== RUN   TestAModelBackAfterOneMissIsNotARemoval
+--- PASS: TestAModelBackAfterOneMissIsNotARemoval (0.01s)
+=== RUN   TestSilentlyShortListOnlyWarnsOnce
+--- PASS: TestSilentlyShortListOnlyWarnsOnce (0.01s)
+=== RUN   TestOpenRouterPagingIsAFailedScan
+=== RUN   TestOpenRouterPagingIsAFailedScan/links.next
+=== RUN   TestOpenRouterPagingIsAFailedScan/total_count
+--- PASS: TestOpenRouterPagingIsAFailedScan (0.01s)
+    --- PASS: TestOpenRouterPagingIsAFailedScan/links.next (0.01s)
+    --- PASS: TestOpenRouterPagingIsAFailedScan/total_count (0.01s)
+=== RUN   TestFailedSaveKeepsTheOldSnapshot
+--- PASS: TestFailedSaveKeepsTheOldSnapshot (0.01s)
+=== RUN   TestFailuresAreNeverReportedAsRemovals
+=== RUN   TestFailuresAreNeverReportedAsRemovals/server_error_on_every_attempt
+=== RUN   TestFailuresAreNeverReportedAsRemovals/rate_limited_on_every_attempt
+=== RUN   TestFailuresAreNeverReportedAsRemovals/maintenance_page_with_status_200
+=== RUN   TestFailuresAreNeverReportedAsRemovals/body_cut_off_mid-list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/error_object_with_status_200
+=== RUN   TestFailuresAreNeverReportedAsRemovals/empty_list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/null_list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/second_page_fails
+=== RUN   TestFailuresAreNeverReportedAsRemovals/last_page_fails
+=== RUN   TestFailuresAreNeverReportedAsRemovals/has_more_with_no_cursor
+=== RUN   TestFailuresAreNeverReportedAsRemovals/page_token_that_never_changes
+=== RUN   TestFailuresAreNeverReportedAsRemovals/list_suddenly_mostly_empty
+=== RUN   TestFailuresAreNeverReportedAsRemovals/wrong_type_for_a_field
+=== RUN   TestFailuresAreNeverReportedAsRemovals/server_too_slow
+--- PASS: TestFailuresAreNeverReportedAsRemovals (6.64s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/server_error_on_every_attempt (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/rate_limited_on_every_attempt (0.02s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/maintenance_page_with_status_200 (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/body_cut_off_mid-list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/error_object_with_status_200 (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/empty_list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/null_list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/second_page_fails (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/last_page_fails (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/has_more_with_no_cursor (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/page_token_that_never_changes (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/list_suddenly_mostly_empty (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/wrong_type_for_a_field (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/server_too_slow (6.51s)
+=== RUN   TestTransientFailuresAreRetried
+--- PASS: TestTransientFailuresAreRetried (0.01s)
+=== RUN   TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline
+--- PASS: TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline (0.01s)
+=== RUN   TestCancelledRunLeavesSnapshotsAlone
+--- PASS: TestCancelledRunLeavesSnapshotsAlone (0.00s)
+=== RUN   TestAModelBackAfterOneMissIsNotARemoval
+--- PASS: TestAModelBackAfterOneMissIsNotARemoval (0.01s)
+=== RUN   TestSilentlyShortListOnlyWarnsOnce
+--- PASS: TestSilentlyShortListOnlyWarnsOnce (0.01s)
+=== RUN   TestOpenRouterPagingIsAFailedScan
+=== RUN   TestOpenRouterPagingIsAFailedScan/links.next
+=== RUN   TestOpenRouterPagingIsAFailedScan/total_count
+--- PASS: TestOpenRouterPagingIsAFailedScan (0.01s)
+    --- PASS: TestOpenRouterPagingIsAFailedScan/links.next (0.01s)
+    --- PASS: TestOpenRouterPagingIsAFailedScan/total_count (0.01s)
+=== RUN   TestFailedSaveKeepsTheOldSnapshot
+--- PASS: TestFailedSaveKeepsTheOldSnapshot (0.01s)
+=== RUN   TestFailuresAreNeverReportedAsRemovals
+=== RUN   TestFailuresAreNeverReportedAsRemovals/server_error_on_every_attempt
+=== RUN   TestFailuresAreNeverReportedAsRemovals/rate_limited_on_every_attempt
+=== RUN   TestFailuresAreNeverReportedAsRemovals/maintenance_page_with_status_200
+=== RUN   TestFailuresAreNeverReportedAsRemovals/body_cut_off_mid-list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/error_object_with_status_200
+=== RUN   TestFailuresAreNeverReportedAsRemovals/empty_list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/null_list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/second_page_fails
+=== RUN   TestFailuresAreNeverReportedAsRemovals/last_page_fails
+=== RUN   TestFailuresAreNeverReportedAsRemovals/has_more_with_no_cursor
+=== RUN   TestFailuresAreNeverReportedAsRemovals/page_token_that_never_changes
+=== RUN   TestFailuresAreNeverReportedAsRemovals/list_suddenly_mostly_empty
+=== RUN   TestFailuresAreNeverReportedAsRemovals/wrong_type_for_a_field
+=== RUN   TestFailuresAreNeverReportedAsRemovals/server_too_slow
+--- PASS: TestFailuresAreNeverReportedAsRemovals (6.63s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/server_error_on_every_attempt (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/rate_limited_on_every_attempt (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/maintenance_page_with_status_200 (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/body_cut_off_mid-list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/error_object_with_status_200 (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/empty_list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/null_list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/second_page_fails (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/last_page_fails (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/has_more_with_no_cursor (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/page_token_that_never_changes (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/list_suddenly_mostly_empty (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/wrong_type_for_a_field (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/server_too_slow (6.51s)
+=== RUN   TestTransientFailuresAreRetried
+--- PASS: TestTransientFailuresAreRetried (0.01s)
+=== RUN   TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline
+--- PASS: TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline (0.01s)
+=== RUN   TestCancelledRunLeavesSnapshotsAlone
+--- PASS: TestCancelledRunLeavesSnapshotsAlone (0.00s)
+=== RUN   TestAModelBackAfterOneMissIsNotARemoval
+--- PASS: TestAModelBackAfterOneMissIsNotARemoval (0.01s)
+=== RUN   TestSilentlyShortListOnlyWarnsOnce
+--- PASS: TestSilentlyShortListOnlyWarnsOnce (0.01s)
+=== RUN   TestOpenRouterPagingIsAFailedScan
+=== RUN   TestOpenRouterPagingIsAFailedScan/links.next
+=== RUN   TestOpenRouterPagingIsAFailedScan/total_count
+--- PASS: TestOpenRouterPagingIsAFailedScan (0.01s)
+    --- PASS: TestOpenRouterPagingIsAFailedScan/links.next (0.01s)
+    --- PASS: TestOpenRouterPagingIsAFailedScan/total_count (0.01s)
+=== RUN   TestFailedSaveKeepsTheOldSnapshot
+--- PASS: TestFailedSaveKeepsTheOldSnapshot (0.01s)
+PASS
+ok  	github.com/radarmodel/radarmodel/ai	20.064s

@@ -1,0 +1,156 @@
+# Every test, verbose
+# recorded 2026-10-17 19:21 UTC with go1.24.13 linux/amd64
+# Linux 6.17.0-1022-azure, INTEL(R) XEON(R) PLATINUM 8573C, 4 CPUs
+# command: go test -count=1 -v ./...
+
+?   	github.com/radarmodel/radarmodel	[no test files]
+=== RUN   TestFailuresAreNeverReportedAsRemovals
+=== RUN   TestFailuresAreNeverReportedAsRemovals/server_error_on_every_attempt
+=== RUN   TestFailuresAreNeverReportedAsRemovals/rate_limited_on_every_attempt
+=== RUN   TestFailuresAreNeverReportedAsRemovals/maintenance_page_with_status_200
+=== RUN   TestFailuresAreNeverReportedAsRemovals/body_cut_off_mid-list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/error_object_with_status_200
+=== RUN   TestFailuresAreNeverReportedAsRemovals/empty_list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/null_list
+=== RUN   TestFailuresAreNeverReportedAsRemovals/second_page_fails
+=== RUN   TestFailuresAreNeverReportedAsRemovals/last_page_fails
+=== RUN   TestFailuresAreNeverReportedAsRemovals/has_more_with_no_cursor
+=== RUN   TestFailuresAreNeverReportedAsRemovals/page_token_that_never_changes
+=== RUN   TestFailuresAreNeverReportedAsRemovals/list_suddenly_mostly_empty
+=== RUN   TestFailuresAreNeverReportedAsRemovals/wrong_type_for_a_field
+=== RUN   TestFailuresAreNeverReportedAsRemovals/server_too_slow
+--- PASS: TestFailuresAreNeverReportedAsRemovals (6.67s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/server_error_on_every_attempt (0.04s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/rate_limited_on_every_attempt (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/maintenance_page_with_status_200 (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/body_cut_off_mid-list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/error_object_with_status_200 (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/empty_list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/null_list (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/second_page_fails (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/last_page_fails (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/has_more_with_no_cursor (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/page_token_that_never_changes (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/list_suddenly_mostly_empty (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/wrong_type_for_a_field (0.01s)
+    --- PASS: TestFailuresAreNeverReportedAsRemovals/server_too_slow (6.50s)
+=== RUN   TestTransientFailuresAreRetried
+--- PASS: TestTransientFailuresAreRetried (0.01s)
+=== RUN   TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline
+--- PASS: TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline (0.01s)
+=== RUN   TestAcceptingARealMassRemoval
+--- PASS: TestAcceptingARealMassRemoval (0.00s)
+=== RUN   TestCancelledRunLeavesSnapshotsAlone
+--- PASS: TestCancelledRunLeavesSnapshotsAlone (0.00s)
+=== RUN   TestFirstRunRecordsBaselineThenNothingChanges
+--- PASS: TestFirstRunRecordsBaselineThenNothingChanges (0.01s)
+=== RUN   TestWatchedModelRemovedIsBreakingOnEveryProvider
+--- PASS: TestWatchedModelRemovedIsBreakingOnEveryProvider (0.01s)
+=== RUN   TestUnwatchedChangesAreInfo
+--- PASS: TestUnwatchedChangesAreInfo (0.01s)
+=== RUN   TestRenameIsNoted
+--- PASS: TestRenameIsNoted (0.01s)
+=== RUN   TestLimitAndPriceChanges
+--- PASS: TestLimitAndPriceChanges (0.01s)
+=== RUN   TestEquivalentNumbersAreNotChanges
+--- PASS: TestEquivalentNumbersAreNotChanges (0.01s)
+=== RUN   TestUnlistedWatchedModelWarnsFromTheFirstRun
+--- PASS: TestUnlistedWatchedModelWarnsFromTheFirstRun (0.00s)
+=== RUN   TestPaginationReadsEveryPage
+--- PASS: TestPaginationReadsEveryPage (0.01s)
+=== RUN   TestKeysGoInHeadersAndNeverIntoErrors
+--- PASS: TestKeysGoInHeadersAndNeverIntoErrors (0.00s)
+=== RUN   TestMissingKeyFailsOnlyThatProvider
+--- PASS: TestMissingKeyFailsOnlyThatProvider (0.00s)
+=== RUN   TestDryRunKeepsTheStoredSnapshot
+--- PASS: TestDryRunKeepsTheStoredSnapshot (0.00s)
+=== RUN   TestTwoProvidersOfOneType
+--- PASS: TestTwoProvidersOfOneType (0.00s)
+=== RUN   TestConfigRejectsTypos
+--- PASS: TestConfigRejectsTypos (0.00s)
+=== RUN   TestGlob
+--- PASS: TestGlob (0.00s)
+=== RUN   TestAModelBackAfterOneMissIsNotARemoval
+--- PASS: TestAModelBackAfterOneMissIsNotARemoval (0.01s)
+=== RUN   TestSilentlyShortListOnlyWarnsOnce
+--- PASS: TestSilentlyShortListOnlyWarnsOnce (0.01s)
+=== RUN   TestAnthropicLimitsAndLifecycle
+--- PASS: TestAnthropicLimitsAndLifecycle (0.01s)
+=== RUN   TestOpenRouterPagingIsAFailedScan
+=== RUN   TestOpenRouterPagingIsAFailedScan/links.next
+=== RUN   TestOpenRouterPagingIsAFailedScan/total_count
+--- PASS: TestOpenRouterPagingIsAFailedScan (0.01s)
+    --- PASS: TestOpenRouterPagingIsAFailedScan/links.next (0.01s)
+    --- PASS: TestOpenRouterPagingIsAFailedScan/total_count (0.01s)
+=== RUN   TestNonNumericPriceIsKeptNotFatal
+--- PASS: TestNonNumericPriceIsKeptNotFatal (0.00s)
+=== RUN   TestSourceNamesThatWouldShareAFile
+--- PASS: TestSourceNamesThatWouldShareAFile (0.00s)
+=== RUN   TestFailedSaveKeepsTheOldSnapshot
+--- PASS: TestFailedSaveKeepsTheOldSnapshot (0.01s)
+PASS
+ok  	github.com/radarmodel/radarmodel/ai	6.817s
+=== RUN   TestCheckExitCodes
+--- PASS: TestCheckExitCodes (3.02s)
+=== RUN   TestShow
+--- PASS: TestShow (0.00s)
+=== RUN   TestInit
+--- PASS: TestInit (0.00s)
+=== RUN   TestBadInput
+--- PASS: TestBadInput (0.00s)
+=== RUN   TestVersion
+--- PASS: TestVersion (0.00s)
+=== RUN   TestDropRepeats
+--- PASS: TestDropRepeats (0.00s)
+=== RUN   TestLockedStoreRefusesASecondRun
+--- PASS: TestLockedStoreRefusesASecondRun (0.00s)
+=== RUN   TestDropRepeatsForgetsAModelThatCameBack
+--- PASS: TestDropRepeatsForgetsAModelThatCameBack (0.00s)
+PASS
+ok  	github.com/radarmodel/radarmodel/cmd/radarmodel-ai	3.023s
+=== RUN   TestDiff
+--- PASS: TestDiff (0.00s)
+=== RUN   TestNormalizeRejectsDuplicatesAndEmptyIDs
+--- PASS: TestNormalizeRejectsDuplicatesAndEmptyIDs (0.00s)
+=== RUN   TestStoreSaveLatestAndPrune
+--- PASS: TestStoreSaveLatestAndPrune (0.01s)
+=== RUN   TestSafeName
+--- PASS: TestSafeName (0.00s)
+=== RUN   TestReportExitCodes
+--- PASS: TestReportExitCodes (0.00s)
+=== RUN   TestReportText
+--- PASS: TestReportText (0.00s)
+=== RUN   TestFetchRedactsKeys
+--- PASS: TestFetchRedactsKeys (0.00s)
+=== RUN   TestFetchDoesNotRetryClientErrors
+--- PASS: TestFetchDoesNotRetryClientErrors (0.00s)
+=== RUN   TestFetchRefusesHugeBodies
+--- PASS: TestFetchRefusesHugeBodies (0.00s)
+=== RUN   TestFileURLsReadSavedResponses
+--- PASS: TestFileURLsReadSavedResponses (0.02s)
+=== RUN   TestWebhookAndSlack
+--- PASS: TestWebhookAndSlack (0.00s)
+=== RUN   TestNothingWorthSendingSendsNothing
+--- PASS: TestNothingWorthSendingSendsNothing (0.00s)
+=== RUN   TestFailingWebhookIsReported
+--- PASS: TestFailingWebhookIsReported (0.00s)
+=== RUN   TestUnsetSecretIsAConfigError
+--- PASS: TestUnsetSecretIsAConfigError (0.00s)
+=== RUN   TestEmail
+--- PASS: TestEmail (0.00s)
+=== RUN   TestDurationJSON
+--- PASS: TestDurationJSON (0.00s)
+=== RUN   TestLoadJSONRejectsUnknownFields
+--- PASS: TestLoadJSONRejectsUnknownFields (0.00s)
+=== RUN   TestCrossHostRedirectIsRefused
+--- PASS: TestCrossHostRedirectIsRefused (0.00s)
+=== RUN   TestWebhookErrorsHideTheURL
+--- PASS: TestWebhookErrorsHideTheURL (0.00s)
+=== RUN   TestAlertClientRefusesFileURLs
+--- PASS: TestAlertClientRefusesFileURLs (0.00s)
+=== RUN   TestLock
+--- PASS: TestLock (0.00s)
+=== RUN   TestReservedNamesAndKeys
+--- PASS: TestReservedNamesAndKeys (0.00s)
+PASS
+ok  	github.com/radarmodel/radarmodel/core	0.042s
