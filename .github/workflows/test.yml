@@ -56,10 +56,14 @@ jobs:
       - name: Build without CGo
         env:
           CGO_ENABLED: '0'
-        run: go build ./cmd/radarmodel-ai
-      - name: Smoke test the built binary
+        run: |
+          go build ./cmd/radarmodel-ai
+          go build ./cmd/radarmodel-schema
+      - name: Smoke test the built binaries
         if: runner.os != 'Windows'
-        run: sh scripts/smoke.sh ./radarmodel-ai
+        run: |
+          sh scripts/smoke.sh ./radarmodel-ai
+          sh scripts/smoke-schema.sh ./radarmodel-schema
       - name: Third-party license texts are all found
         if: runner.os == 'Linux'
         run: bash scripts/third-party-licenses.sh > /dev/null
@@ -75,4 +79,52 @@ jobs:
         shell: bash
         run: |
           go mod tidy
-          git diff --exit-code -- go.mod
+          git diff --exit-code -- go.mod go.sum
+
+  # RadarModel Schema against real database servers. The tests in the job
+  # above cover SQLite on every system; this one adds Postgres and MySQL.
+  databases:
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql: ['mysql:8.4', 'mariadb:11.4']
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+      mysql:
+        image: ${{ matrix.mysql }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MARIADB_ROOT_PASSWORD: root
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -proot || mariadb-admin ping -h 127.0.0.1 -proot"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    env:
+      CGO_ENABLED: '0'
+      RADARMODEL_TEST_POSTGRES: postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable
+      RADARMODEL_TEST_MYSQL: root:root@tcp(127.0.0.1:3306)/
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Schema tests against Postgres 16 and ${{ matrix.mysql }}
+        shell: bash
+        run: |
+          set -o pipefail
+          go test -count=1 -v ./schema/ ./cmd/radarmodel-schema/ 2>&1 | tee test-output.txt
+      - name: Report test failures as annotations
+        if: failure()
+        shell: bash
+        run: |
+          grep -E -- '--- FAIL|^FAIL|panic:|_test\.go:[0-9]+:' test-output.txt | head -n 10 |
+            while IFS= read -r line; do echo "::error title=go test::$line"; done || true

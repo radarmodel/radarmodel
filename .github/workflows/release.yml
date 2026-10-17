@@ -130,7 +130,9 @@ jobs:
           ls -l pkg
       - name: Smoke test
         if: matrix.smoke
-        run: sh scripts/smoke.sh ./pkg/radarmodel-ai
+        run: |
+          sh scripts/smoke.sh ./pkg/radarmodel-ai
+          sh scripts/smoke-schema.sh ./pkg/radarmodel-schema
       - name: Package
         run: |
           name=radarmodel_${GOOS}_${GOARCH}
@@ -179,7 +181,7 @@ jobs:
           cat SHA256SUMS
           for f in $FILES; do test -f "$f" || { echo "missing $f" >&2; exit 1; }; done
           cat > ../notes.md <<'EOF'
-          Ready-built RadarModel binaries. Each archive holds the `radarmodel-ai` command with LICENSE, NOTICE, README.md and THIRD_PARTY_LICENSES.md.
+          Ready-built RadarModel binaries. Each archive holds the `radarmodel-ai` and `radarmodel-schema` commands with LICENSE, NOTICE, README.md and THIRD_PARTY_LICENSES.md.
 
           | System | File |
           |---|---|
@@ -189,7 +191,7 @@ jobs:
           | macOS, Intel | radarmodel_darwin_amd64.tar.gz |
           | Windows, x86-64 | radarmodel_windows_amd64.zip |
 
-          The binaries are pure Go with no CGo and need nothing else installed. SHA256SUMS lists the checksums. The macOS binaries aren't signed by Apple, so macOS may ask you to allow them the first time, or you can run `xattr -d com.apple.quarantine radarmodel-ai`.
+          The binaries are pure Go with no CGo and need nothing else installed. SHA256SUMS lists the checksums. The macOS binaries aren't signed by Apple, so macOS may ask you to allow them the first time, or you can run `xattr -d com.apple.quarantine radarmodel-ai radarmodel-schema`.
           EOF
       - name: Tag the commit and publish the release, binaries attached
         if: env.NEW == 'true'

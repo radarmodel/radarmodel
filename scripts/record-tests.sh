@@ -36,8 +36,13 @@ record tests.txt "Every test, verbose" go test -count=1 -v ./...
 record race.txt "Every test with the race detector" env CGO_ENABLED=1 go test -race -count=1 ./...
 record failures.txt "Failure tests: provider and network faults must never be reported as removed models, three runs" \
 	go test -count=3 -v -run '^(TestFailuresAreNeverReportedAsRemovals|TestTransientFailuresAreRetried|TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline|TestCancelledRunLeavesSnapshotsAlone|TestOpenRouterPagingIsAFailedScan|TestSilentlyShortListOnlyWarnsOnce|TestAModelBackAfterOneMissIsNotARemoval|TestFailedSaveKeepsTheOldSnapshot)$' ./ai/
+record schema-failures.txt "Schema failure tests: lost connections, revoked privileges, missing files and migrations mid-scan must never be reported as drift, three runs" \
+	go test -count=3 -v -run '^(TestConnectionLostMidScanIsAFailedScan|TestServerUnreachableIsAFailedScan|TestWrongPasswordIsAFailedScan|TestMissingDSNVariableIsAFailedScan|TestSQLiteFileProblemsAreFailedScans|TestPostgresRevokedPrivilegesAreNotDrift|TestMySQLRevokedPrivilegeIsAFailedScanNotADrop|TestSchemaChangingDuringTheScan|TestTimeoutIsAFailedScan|TestTooFewTablesIsAFailedScan)$' ./schema/
+record schema-large.txt "Large schema: 2,000 tables of 8 columns with an index each, on SQLite, Postgres and MySQL" \
+	go test -count=1 -v -run '^TestLargeSchema$' -timeout 30m ./schema/
 go build -o /tmp/radarmodel-ai-record ./cmd/radarmodel-ai
-record smoke.txt "Smoke test of the built binary, offline" sh scripts/smoke.sh /tmp/radarmodel-ai-record
+go build -o /tmp/radarmodel-schema-record ./cmd/radarmodel-schema
+record smoke.txt "Smoke tests of the built binaries, offline" sh -c 'sh scripts/smoke.sh /tmp/radarmodel-ai-record && sh scripts/smoke-schema.sh /tmp/radarmodel-schema-record'
 
 # A live scan of OpenRouter's public model list (it needs no key): proves the
 # parser against the real thing. Two scans, so the second compares with the
@@ -53,5 +58,5 @@ printf '{"providers":[{"type":"openrouter"}],"watch":["openrouter:openai/*","ope
 } > "$out/live-openrouter.txt"
 rm -rf "$live"
 
-grep -hE '^(ok|FAIL|---)' "$out/tests.txt" "$out/race.txt" "$out/failures.txt" | grep -v -- '--- PASS' || true
+grep -hE '^(ok|FAIL|---)' "$out/tests.txt" "$out/race.txt" "$out/failures.txt" "$out/schema-failures.txt" | grep -v -- '--- PASS' || true
 echo "results written to $out/"

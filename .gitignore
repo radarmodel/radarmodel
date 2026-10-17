@@ -4,3 +4,7 @@
 /.radarmodel/
 /coverage.out
 test-output.txt
+/go.work
+/go.work.sum
+/radarmodel-schema
+/radarmodel-schema.exe

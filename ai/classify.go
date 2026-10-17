@@ -63,27 +63,8 @@ func (w WatchList) exact(source string) []string {
 	return out
 }
 
-// glob matches s against a pattern in which '*' stands for any run of
-// characters. Everything else matches itself.
-func glob(pattern, s string) bool {
-	if !strings.Contains(pattern, "*") {
-		return pattern == s
-	}
-	parts := strings.Split(pattern, "*")
-	if !strings.HasPrefix(s, parts[0]) {
-		return false
-	}
-	s = s[len(parts[0]):]
-	last := parts[len(parts)-1]
-	for _, p := range parts[1 : len(parts)-1] {
-		i := strings.Index(s, p)
-		if i < 0 {
-			return false
-		}
-		s = s[i+len(p):]
-	}
-	return strings.HasSuffix(s, last) && len(s) >= len(last)
-}
+// glob is core.Glob: '*' matches any run of characters, '/' included.
+func glob(pattern, s string) bool { return core.Glob(pattern, s) }
 
 // limitAttrs shrinking can break requests that used to fit.
 var limitAttrs = map[string]bool{AttrContext: true, AttrMaxOutput: true, AttrInputLimit: true, AttrOutputLimit: true}
