@@ -388,7 +388,8 @@ SQLite keeps CHECK constraints only in the CREATE TABLE statement; a change
 there shows as the table's `sql` changing. Its foreign keys have no names, so
 they're named after their columns and the table they reference
 (`main.orders.fk_customer_id_customers`). A virtual table is recorded by its
-CREATE statement only. MySQL lets a unique key and a foreign key share a
+CREATE statement only. MariaDB before 10.8 accepts `DESC` in an index and ignores it, so there's
+no order to compare. MySQL lets a unique key and a foreign key share a
 name; when two constraints on a table do, their type is added to the name
 (`app.orders.fk_a (unique)`).
 

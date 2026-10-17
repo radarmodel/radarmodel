@@ -4,6 +4,8 @@
 package schema
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/radarmodel/radarmodel/core"
@@ -60,6 +62,15 @@ func TestManualChangesAreCaught(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.ddl, func(t *testing.T) {
 				h := newHarness(t, d)
+				if c.ddl == "index order" && d.name == "mysql" {
+					var v string
+					h.admin.QueryRow("SELECT VERSION()").Scan(&v)
+					var major, minor int
+					fmt.Sscanf(v, "%d.%d", &major, &minor)
+					if strings.Contains(v, "MariaDB") && major == 10 && minor < 8 {
+						t.Skip("MariaDB before 10.8 accepts DESC in an index and ignores it")
+					}
+				}
 				h.exec("base")
 				h.run(Options{})
 				h.exec(c.ddl)
