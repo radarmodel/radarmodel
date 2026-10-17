@@ -30,8 +30,11 @@ Two products under one roof, on one shared engine, in this one repo:
 
 Main promise: never miss a change to a watched model, never cry wolf. Any
 provider or network fault is a failed scan (error, exit 2, stored snapshot
-untouched), never a removal. `ai/failure_test.go` is the guard; keep every
-case passing and add one for each new way a list can come back wrong.
+untouched), never a removal. A watched model's removal is only breaking once
+a second scan confirms it (`confirm_removals`, pending mark in the stored
+snapshot), for lists that come back short with no visible error.
+`ai/failure_test.go` is the guard; keep every case passing and add one for
+each new way a list can come back wrong.
 
 ## Agreed plan (October 17, 2026)
 
@@ -50,8 +53,8 @@ case passing and add one for each new way a list can come back wrong.
 ## Working here
 
 - Go version: whatever `go.mod` says. Standard library only; build and test
-  with `CGO_ENABLED=0`.
-- `go test ./...`, `go test -race ./...`, `go vet ./...`, `gofmt -l .`,
+  with `CGO_ENABLED=0` (the race detector needs `CGO_ENABLED=1`).
+- `go test ./...`, `CGO_ENABLED=1 go test -race ./...`, `go vet ./...`, `gofmt -l .`,
   `sh scripts/smoke.sh ./radarmodel-ai` after `go build ./cmd/radarmodel-ai`.
 - Test results are recorded in `test/results` by `scripts/record-tests.sh`,
   or by starting the `record` workflow

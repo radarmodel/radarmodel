@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -45,11 +46,24 @@ func TestWatchedModelRemovedIsBreakingOnEveryProvider(t *testing.T) {
 	h.fake.anthropic = h.fake.anthropic[:2]
 	h.fake.google = []googleModel{h.fake.google[0], h.fake.google[2]}
 	h.fake.openrouter = []orModel{h.fake.openrouter[0], h.fake.openrouter[2]}
+	gone := map[string]string{"openai": "gpt-4o", "anthropic": "claude-opus-4-1",
+		"google": "gemini-2.5-pro", "openrouter": "openai/gpt-4o"}
+	// The first scan that misses them warns; nothing breaks on one scan.
 	r := h.run(false)
-	for src, id := range map[string]string{"openai": "gpt-4o", "anthropic": "claude-opus-4-1",
-		"google": "gemini-2.5-pro", "openrouter": "openai/gpt-4o"} {
+	for src, id := range gone {
 		c := find(result(t, r, src), core.Removed, id, "")
-		if c == nil || c.Severity != core.Breaking || !c.Watched {
+		if c == nil || c.Severity != core.Warning || !c.Watched || !strings.Contains(c.Note, "next scan") {
+			t.Errorf("%s: first miss of %s: %+v\n%s", src, id, c, dump(r))
+		}
+	}
+	if r.ExitCode() != core.ExitOK {
+		t.Fatalf("exit %d after one miss", r.ExitCode())
+	}
+	// The second scan confirms them as breaking.
+	r = h.run(false)
+	for src, id := range gone {
+		c := find(result(t, r, src), core.Removed, id, "")
+		if c == nil || c.Severity != core.Breaking || !c.Watched || !strings.Contains(c.Note, "confirmed") {
 			t.Errorf("%s: removal of %s: %+v\n%s", src, id, c, dump(r))
 		}
 		// Reported once as a removal, not again as unlisted in the same run.
@@ -90,6 +104,7 @@ func TestRenameIsNoted(t *testing.T) {
 	h := newHarness(t, "anthropic:claude-opus-4-1")
 	h.run(false)
 	h.fake.anthropic[2] = [2]string{"claude-opus-4-1-20250805", "Claude Opus 4.1"}
+	h.cfg.ConfirmRemovals = new(bool) // report on the first scan
 	r := h.run(false)
 	c := find(result(t, r, "anthropic"), core.Removed, "claude-opus-4-1", "")
 	if c == nil || c.Severity != core.Breaking || !strings.Contains(c.Note, "claude-opus-4-1-20250805") {
@@ -321,4 +336,150 @@ func sameStored(t *testing.T, st *core.Store, source string, before []byte) {
 	if after := storedBytes(t, st, source); !bytes.Equal(before, after) {
 		t.Fatalf("%s: a failed scan changed the stored snapshot", source)
 	}
+}
+
+func TestAModelBackAfterOneMissIsNotARemoval(t *testing.T) {
+	h := newHarness(t, "openai:gpt-4o")
+	h.run(false)
+	h.fake.openai = []string{"gpt-4o-mini", "o3"}
+	if c := find(result(t, h.run(false), "openai"), core.Removed, "gpt-4o", ""); c == nil || c.Severity != core.Warning {
+		t.Fatalf("first miss: %+v", c)
+	}
+	h.fake.openai = []string{"gpt-4o", "gpt-4o-mini", "o3"}
+	r := h.run(false)
+	res := result(t, r, "openai")
+	back := find(res, core.Added, "gpt-4o", "")
+	if back == nil || back.Severity != core.Info || r.ExitCode() != core.ExitOK {
+		t.Fatalf("%s", dump(r))
+	}
+	// And the next scan is quiet: the pending mark is gone from the store.
+	if r := h.run(false); len(result(t, r, "openai").Changes) != 0 {
+		t.Fatalf("%s", dump(r))
+	}
+	s, _ := h.store.Latest("openai")
+	for _, it := range s.Items {
+		if it.Attrs[pendingAttr] != "" {
+			t.Fatalf("pending mark left on %s", it.ID)
+		}
+	}
+}
+
+// A list that comes back short with no visible error (here Google drops its
+// page token, so page two is silently missing) stays a warning for one scan.
+func TestSilentlyShortListOnlyWarnsOnce(t *testing.T) {
+	h := newHarness(t, "google:gemini-2.5-pro", "google:text-embedding-004")
+	h.fake.pageSize = 2
+	h.run(false)
+	h.fake.hook = func(w http.ResponseWriter, r *http.Request, n int) bool {
+		if r.URL.Path != "/v1beta/models" {
+			return false
+		}
+		w.Write([]byte(`{"models":[{"name":"models/gemini-2.5-flash"},{"name":"models/gemini-2.5-pro"}]}`))
+		return true
+	}
+	r := h.run(false)
+	c := find(result(t, r, "google"), core.Removed, "text-embedding-004", "")
+	if c == nil || c.Severity != core.Warning || r.ExitCode() != core.ExitOK {
+		t.Fatalf("%s", dump(r))
+	}
+	h.fake.hook = nil
+	if r := h.run(false); r.ExitCode() != core.ExitOK || find(result(t, r, "google"), core.Removed, "text-embedding-004", "") != nil {
+		t.Fatalf("%s", dump(r))
+	}
+}
+
+func TestAnthropicLimitsAndLifecycle(t *testing.T) {
+	h := newHarness(t, "anthropic:claude-sonnet-4-5", "anthropic:claude-haiku-4-5")
+	extra := map[string]map[string]any{}
+	h.fake.anthropicExtra = extra
+	extra["claude-sonnet-4-5"] = map[string]any{"max_input_tokens": 1000000, "max_tokens": 64000, "lifecycle": "active", "retires_at": nil}
+	extra["claude-haiku-4-5"] = map[string]any{"max_input_tokens": 200000, "max_tokens": 64000, "lifecycle": "active", "retires_at": nil}
+	h.run(false)
+	extra["claude-sonnet-4-5"] = map[string]any{"max_input_tokens": 200000, "max_tokens": 64000, "lifecycle": "deprecated", "retires_at": "2027-03-01T00:00:00Z"}
+	extra["claude-haiku-4-5"] = map[string]any{"max_input_tokens": 200000, "max_tokens": 64000, "lifecycle": "retired", "retires_at": nil}
+	r := h.run(false)
+	res := result(t, r, "anthropic")
+	for _, w := range []struct {
+		id, field string
+		sev       core.Severity
+	}{
+		{"claude-sonnet-4-5", AttrContext, core.Breaking},
+		{"claude-sonnet-4-5", AttrLifecycle, core.Warning},
+		{"claude-sonnet-4-5", AttrExpires, core.Warning},
+		{"claude-haiku-4-5", AttrLifecycle, core.Breaking},
+	} {
+		if c := find(res, core.Changed, w.id, w.field); c == nil || c.Severity != w.sev {
+			t.Errorf("%s %s: %+v, want %s", w.id, w.field, c, w.sev)
+		}
+	}
+	if t.Failed() {
+		t.Log(dump(r))
+	}
+}
+
+func TestOpenRouterPagingIsAFailedScan(t *testing.T) {
+	for name, extra := range map[string]string{
+		"links.next":  `,"links":{"next":"/api/v1/models?offset=3"}`,
+		"total_count": `,"total_count":340`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			h := newHarness(t, "openrouter:openai/gpt-4o")
+			h.run(false)
+			h.fake.hook = func(w http.ResponseWriter, r *http.Request, n int) bool {
+				if r.URL.Path != "/api/v1/models" {
+					return false
+				}
+				w.Write([]byte(`{"data":[{"id":"a/1"},{"id":"a/2"},{"id":"openai/gpt-4o"}]` + extra + `}`))
+				return true
+			}
+			r := h.run(false)
+			if res := result(t, r, "openrouter"); res.Error == "" || len(res.Changes) != 0 {
+				t.Fatalf("%s", dump(r))
+			}
+		})
+	}
+}
+
+func TestNonNumericPriceIsKeptNotFatal(t *testing.T) {
+	h := newHarness(t, "openrouter:openai/gpt-4o")
+	h.fake.openrouter[2].In = "varies"
+	r := h.run(false)
+	if res := result(t, r, "openrouter"); res.Error != "" {
+		t.Fatal(res.Error)
+	}
+	s, _ := h.store.Latest("openrouter")
+	if s.Index()["meta-llama/llama-3.3-70b-instruct"].Attrs[AttrInputPrice] != "varies" {
+		t.Fatalf("%+v", s.Index()["meta-llama/llama-3.3-70b-instruct"])
+	}
+}
+
+func TestSourceNamesThatWouldShareAFile(t *testing.T) {
+	for _, pair := range [][2]string{{"OpenAI", "openai"}, {"my proxy", "my/proxy"}} {
+		cfg := &Config{Providers: []ProviderConfig{{Type: OpenAI, Name: pair[0]}, {Type: OpenAI, Name: pair[1]}}}
+		if _, err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "too close") {
+			t.Errorf("%v: %v", pair, err)
+		}
+	}
+}
+
+func TestFailedSaveKeepsTheOldSnapshot(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("folder permissions work differently on Windows")
+	}
+	h := newHarness(t, "openai:gpt-4o")
+	h.run(false)
+	before := storedBytes(t, h.store, "openai")
+	hist := filepath.Join(h.store.Dir, "history", "openai")
+	os.Chmod(hist, 0o500)
+	t.Cleanup(func() { os.Chmod(hist, 0o755) })
+	if f, err := os.Create(filepath.Join(hist, "probe")); err == nil {
+		f.Close()
+		t.Skip("running as a user who can write anywhere")
+	}
+	h.fake.openai = []string{"gpt-4o", "gpt-5", "o3"}
+	r := h.run(false)
+	if res := result(t, r, "openai"); !strings.Contains(res.Error, "saving the snapshot") || len(res.Changes) != 0 {
+		t.Fatalf("%s", dump(r))
+	}
+	sameStored(t, h.store, "openai", before)
 }

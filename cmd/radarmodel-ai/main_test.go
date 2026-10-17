@@ -80,10 +80,14 @@ func TestCheckExitCodes(t *testing.T) {
 	fake.models = []string{"gpt-4o-mini", "o3"}
 	fake.mu.Unlock()
 	code, out, _ = call("check", "-config", cfg, "-dry-run")
-	if code != core.ExitBreaking || !strings.Contains(out, "BREAKING") || !strings.Contains(out, "gpt-4o *") {
-		t.Fatalf("removal: exit %d\n%s", code, out)
+	if code != core.ExitOK || !strings.Contains(out, "WARNING") || !strings.Contains(out, "gpt-4o *") {
+		t.Fatalf("first miss: exit %d\n%s", code, out)
 	}
-	// Dry run kept the baseline, so the removal is seen again.
+	// The dry run kept the baseline, so this is a first miss again.
+	if code, out, _ = call("check", "-config", cfg); code != core.ExitOK || !strings.Contains(out, "WARNING") {
+		t.Fatalf("first miss: exit %d\n%s", code, out)
+	}
+	// The second miss is breaking.
 	code, out, _ = call("check", "-config", cfg, "-json")
 	if code != core.ExitBreaking {
 		t.Fatalf("after dry run: exit %d", code)
@@ -168,5 +172,33 @@ func TestDropRepeats(t *testing.T) {
 	}
 	if len(r.Results[0].Changes) != 2 {
 		t.Fatal("the terminal report lost a change")
+	}
+}
+
+func TestLockedStoreRefusesASecondRun(t *testing.T) {
+	dir, cfg, _ := setup(t)
+	os.MkdirAll(filepath.Join(dir, ".radarmodel"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".radarmodel", "lock"), []byte("pid 1"), 0o644)
+	code, _, errs := call("check", "-config", cfg)
+	if code != core.ExitError || !strings.Contains(errs, "another run") {
+		t.Fatalf("%d %s", code, errs)
+	}
+	os.Remove(filepath.Join(dir, ".radarmodel", "lock"))
+	if code, _, errs := call("check", "-config", cfg); code != core.ExitOK {
+		t.Fatalf("%d %s", code, errs)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".radarmodel", "lock")); err == nil {
+		t.Fatal("lock left behind")
+	}
+}
+
+func TestDropRepeatsForgetsAModelThatCameBack(t *testing.T) {
+	sent := map[string]bool{}
+	missing := &core.Report{Results: []core.SourceResult{{Source: "a", Changes: []core.Change{{Source: "a", Kind: core.Unlisted, ID: "m"}}}}}
+	quiet := &core.Report{Results: []core.SourceResult{{Source: "a"}}}
+	dropRepeats(missing, sent)
+	dropRepeats(quiet, sent)
+	if got := dropRepeats(missing, sent); len(got.Results[0].Changes) != 1 {
+		t.Fatal("a model missing again after coming back wasn't alerted")
 	}
 }

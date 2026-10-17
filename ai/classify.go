@@ -98,7 +98,8 @@ var priceAttrs = map[string]bool{AttrInputPrice: true, AttrOutputPrice: true}
 //   - a watched model's context or output limit shrinking: breaking
 //   - a watched model's limit no longer published: warning
 //   - a watched model's price going up, or a price appearing or vanishing: warning
-//   - a watched model getting a retirement date: warning
+//   - a watched model getting or changing a retirement date: warning
+//   - a watched model's lifecycle leaving "active": warning, "retired": breaking
 //   - a watched model losing a supported method: warning
 //   - anything else: info
 func Classify(changes []core.Change, prev, next *core.Snapshot, w WatchList) {
@@ -183,6 +184,17 @@ func changeSeverity(c *core.Change) core.Severity {
 			return core.Warning
 		}
 		return core.Info
+	case c.Field == AttrLifecycle:
+		switch c.New {
+		case "", "active":
+			return core.Info
+		case "retired":
+			c.Note = "retired"
+			return core.Breaking
+		default:
+			c.Note = "no longer active"
+			return core.Warning
+		}
 	case c.Field == AttrExpires:
 		if c.New != "" {
 			c.Note = "scheduled to be retired"

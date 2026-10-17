@@ -35,9 +35,23 @@ go vet ./...
 record tests.txt "Every test, verbose" go test -count=1 -v ./...
 record race.txt "Every test with the race detector" env CGO_ENABLED=1 go test -race -count=1 ./...
 record failures.txt "Failure tests: provider and network faults must never be reported as removed models, three runs" \
-	go test -count=3 -v -run '^(TestFailuresAreNeverReportedAsRemovals|TestTransientFailuresAreRetried|TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline|TestCancelledRunLeavesSnapshotsAlone)$' ./ai/
+	go test -count=3 -v -run '^(TestFailuresAreNeverReportedAsRemovals|TestTransientFailuresAreRetried|TestUnreadableStoredSnapshotIsAnErrorNotANewBaseline|TestCancelledRunLeavesSnapshotsAlone|TestOpenRouterPagingIsAFailedScan|TestSilentlyShortListOnlyWarnsOnce|TestAModelBackAfterOneMissIsNotARemoval|TestFailedSaveKeepsTheOldSnapshot)$' ./ai/
 go build -o /tmp/radarmodel-ai-record ./cmd/radarmodel-ai
 record smoke.txt "Smoke test of the built binary, offline" sh scripts/smoke.sh /tmp/radarmodel-ai-record
+
+# A live scan of OpenRouter's public model list (it needs no key): proves the
+# parser against the real thing. Two scans, so the second compares with the
+# first. It depends on a third-party service, so it is recorded but doesn't
+# fail the recording.
+live=$(mktemp -d)
+printf '{"providers":[{"type":"openrouter"}],"watch":["openrouter:openai/*","openrouter:anthropic/*"],"timeout":"30s"}\n' > "$live/radarmodel.json"
+{
+	header "Live scan of OpenRouter's public model list, twice" "radarmodel-ai check -min info (twice), then show openrouter | head -20"
+	/tmp/radarmodel-ai-record check -config "$live/radarmodel.json" -min info 2>&1 || echo "exit $?"
+	/tmp/radarmodel-ai-record check -config "$live/radarmodel.json" -min info 2>&1 || echo "exit $?"
+	/tmp/radarmodel-ai-record show -config "$live/radarmodel.json" openrouter 2>&1 | head -20
+} > "$out/live-openrouter.txt"
+rm -rf "$live"
 
 grep -hE '^(ok|FAIL|---)' "$out/tests.txt" "$out/race.txt" "$out/failures.txt" | grep -v -- '--- PASS' || true
 echo "results written to $out/"

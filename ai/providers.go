@@ -57,6 +57,7 @@ const (
 	AttrOutputPrice   = "output_price"
 	AttrMethods       = "methods"
 	AttrExpires       = "expires"
+	AttrLifecycle     = "lifecycle"
 	maxPages          = 200
 	anthropicVersion  = "2023-06-01"
 	anthropicPageSize = "1000"
@@ -182,8 +183,12 @@ func fetchAnthropic(ctx context.Context, f *core.Fetcher, base, key string) ([]c
 		}
 		var body struct {
 			Data *[]struct {
-				ID          string `json:"id"`
-				DisplayName string `json:"display_name"`
+				ID             string  `json:"id"`
+				DisplayName    string  `json:"display_name"`
+				MaxInputTokens num     `json:"max_input_tokens"`
+				MaxTokens      num     `json:"max_tokens"`
+				Lifecycle      string  `json:"lifecycle"`
+				RetiresAt      *string `json:"retires_at"`
 			} `json:"data"`
 			HasMore bool   `json:"has_more"`
 			LastID  string `json:"last_id"`
@@ -195,7 +200,16 @@ func fetchAnthropic(ctx context.Context, f *core.Fetcher, base, key string) ([]c
 			return nil, fmt.Errorf("response has no \"data\" list")
 		}
 		for _, m := range *body.Data {
-			out = append(out, item(m.ID, AttrName, m.DisplayName))
+			retires := ""
+			if m.RetiresAt != nil {
+				retires = *m.RetiresAt
+			}
+			out = append(out, item(m.ID,
+				AttrName, m.DisplayName,
+				AttrContext, string(m.MaxInputTokens),
+				AttrMaxOutput, string(m.MaxTokens),
+				AttrLifecycle, m.Lifecycle,
+				AttrExpires, retires))
 		}
 		if !body.HasMore {
 			return out, nil
@@ -275,6 +289,10 @@ func fetchOpenRouter(ctx context.Context, f *core.Fetcher, base, key string) ([]
 			} `json:"top_provider"`
 			ExpirationDate *string `json:"expiration_date"`
 		} `json:"data"`
+		TotalCount *int `json:"total_count"`
+		Links      struct {
+			Next *string `json:"next"`
+		} `json:"links"`
 	}
 	h := map[string]string{}
 	if key != "" {
@@ -285,6 +303,14 @@ func fetchOpenRouter(ctx context.Context, f *core.Fetcher, base, key string) ([]
 	}
 	if body.Data == nil {
 		return nil, fmt.Errorf("response has no \"data\" list")
+	}
+	// The full list comes back on one page; any sign of more pages means a
+	// proxy or an API change cut it short.
+	if body.Links.Next != nil && *body.Links.Next != "" {
+		return nil, fmt.Errorf("the list is paged (links.next is set); a partial list would look like removals")
+	}
+	if body.TotalCount != nil && *body.TotalCount != len(*body.Data) {
+		return nil, fmt.Errorf("the list holds %d models but total_count says %d", len(*body.Data), *body.TotalCount)
 	}
 	var out []core.Item
 	for _, m := range *body.Data {
@@ -318,8 +344,10 @@ func item(id string, kv ...string) core.Item {
 	return it
 }
 
-// num reads a JSON number, a number in a string, or null, and keeps it in a
-// canonical form, so "0.0000025" and 2.5e-06 compare equal.
+// num reads a JSON number, a number in a string, or null, and keeps numbers
+// in a canonical form, so "0.0000025" and 2.5e-06 compare equal. A string
+// that isn't a number ("varies") is kept as it is rather than failing the
+// whole scan over one model.
 type num string
 
 func (n *num) UnmarshalJSON(b []byte) error {
@@ -345,8 +373,12 @@ func (n *num) UnmarshalJSON(b []byte) error {
 	}
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return fmt.Errorf("%q is not a number", s)
+		if len(b) > 0 && b[0] == '"' {
+			*n = num(s)
+			return nil
+		}
+		return fmt.Errorf("%s is not a number", b)
 	}
-	*n = num(strconv.FormatFloat(f, 'g', -1, 64))
+	*n = num(strconv.FormatFloat(f, 'f', -1, 64))
 	return nil
 }

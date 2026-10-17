@@ -5,7 +5,8 @@
 # Smoke test for a built radarmodel-ai binary, run offline: a saved OpenAI
 # model list is served from disk through a file:// base URL. The first check
 # records the baseline, the second finds nothing, then a watched model is
-# taken out of the list and the third check must exit 1 and say so.
+# taken out of the list: the third check warns (exit 0) and the fourth
+# confirms it as breaking (exit 1).
 # Used by CI and by the release workflow on every binary it can run.
 #
 # Usage: scripts/smoke.sh ./radarmodel-ai
@@ -41,6 +42,7 @@ EOF2
 "$bin" check | grep -q 'no changes (3 items)'
 
 list gpt-4o-mini o3
+"$bin" check | grep -q 'WARNING.*gpt-4o \*.*next scan'
 set +e
 "$bin" check > out.txt
 code=$?
@@ -48,7 +50,7 @@ set -e
 cat out.txt
 test "$code" -eq 1
 grep -q 'BREAKING' out.txt
-grep -q 'gpt-4o \*' out.txt
+grep -q 'gpt-4o \*.*confirmed' out.txt
 
 "$bin" show openai | grep -q '2 models'
 

@@ -21,12 +21,14 @@ import (
 // Tests change its lists between runs, or set a hook to make a response
 // fail in a chosen way.
 type fakeAPI struct {
-	mu         sync.Mutex
-	openai     []string
-	anthropic  [][2]string // id, display name
-	google     []googleModel
-	openrouter []orModel
-	pageSize   int // Anthropic and Google page size; 0 means everything on one page
+	mu        sync.Mutex
+	openai    []string
+	anthropic [][2]string // id, display name
+	// anthropicExtra adds fields (limits, lifecycle) to Anthropic models by ID.
+	anthropicExtra map[string]map[string]any
+	google         []googleModel
+	openrouter     []orModel
+	pageSize       int // Anthropic and Google page size; 0 means everything on one page
 	// hook may write a response itself and return true to stop the normal one.
 	hook  func(w http.ResponseWriter, r *http.Request, n int) bool
 	calls int
@@ -132,7 +134,11 @@ func (f *fakeAPI) serveAnthropic(w http.ResponseWriter, r *http.Request) {
 	}
 	var data []map[string]any
 	for _, m := range list[start:end] {
-		data = append(data, map[string]any{"id": m[0], "display_name": m[1], "type": "model", "created_at": "2025-09-29T00:00:00Z"})
+		e := map[string]any{"id": m[0], "display_name": m[1], "type": "model", "created_at": "2025-09-29T00:00:00Z"}
+		for k, v := range f.anthropicExtra[m[0]] {
+			e[k] = v
+		}
+		data = append(data, e)
 	}
 	if data == nil {
 		data = []map[string]any{}

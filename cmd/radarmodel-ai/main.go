@@ -193,7 +193,7 @@ func cmdCheck(args []string, stdout, stderr io.Writer, loop bool) int {
 	var outs []core.Output
 	alertMin := core.Warning
 	if !*noAlerts {
-		outs, alertMin, err = cfg.Alerts.Outputs(core.NewHTTPClient(time.Duration(cfg.Timeout)))
+		outs, alertMin, err = cfg.Alerts.Outputs(core.NewAlertClient(time.Duration(cfg.Timeout)))
 		if err != nil {
 			fmt.Fprintln(stderr, err)
 			return core.ExitError
@@ -204,7 +204,13 @@ func cmdCheck(args []string, stdout, stderr io.Writer, loop bool) int {
 	defer stop()
 
 	once := func(sent map[string]bool) int {
+		unlock, err := store.Lock(lockStale)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return core.ExitError
+		}
 		rep := ai.Run(ctx, cfg, w, store, ai.Options{DryRun: dryRun})
+		unlock()
 		if *asJSON {
 			rep.WriteJSON(stdout)
 		} else {
@@ -239,10 +245,37 @@ func cmdCheck(args []string, stdout, stderr io.Writer, loop bool) int {
 	}
 }
 
+// lockStale is how old a lock file must be before it counts as left over
+// from a crashed run. A run takes at most a few minutes.
+const lockStale = 30 * time.Minute
+
 // dropRepeats keeps the watch loop from alerting about the same missing
 // watched model every interval: an "unlisted" warning is sent once per run of
 // the command. It stays in the terminal report every time.
 func dropRepeats(r *core.Report, sent map[string]bool) *core.Report {
+	// A model that is back (or whose entry was fixed) gets alerted again if
+	// it goes missing later.
+	now := map[string]bool{}
+	for _, res := range r.Results {
+		for _, c := range res.Changes {
+			if c.Kind == core.Unlisted {
+				now[c.Source+"\x00"+c.ID] = true
+			}
+		}
+		if res.Error != "" {
+			// A failed scan says nothing about what is listed: keep its marks.
+			for k := range sent {
+				if strings.HasPrefix(k, res.Source+"\x00") {
+					now[k] = true
+				}
+			}
+		}
+	}
+	for k := range sent {
+		if !now[k] {
+			delete(sent, k)
+		}
+	}
 	out := *r
 	out.Results = make([]core.SourceResult, len(r.Results))
 	for i, res := range r.Results {

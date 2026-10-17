@@ -16,12 +16,31 @@ import (
 	"time"
 )
 
-// NewHTTPClient returns a client with the given per-request timeout that also
-// reads file:// URLs from the local disk, for offline runs and tests.
+// NewHTTPClient returns the client used for scans: the given per-request
+// timeout, file:// URLs read from the local disk (for offline runs and tests),
+// and no redirects to another host, because Go forwards custom key headers
+// such as x-api-key on a redirect.
 func NewHTTPClient(timeout time.Duration) *http.Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
-	return &http.Client{Timeout: timeout, Transport: tr}
+	return &http.Client{Timeout: timeout, Transport: tr, CheckRedirect: sameHostRedirects}
+}
+
+// NewAlertClient returns the client used for alerts: plain HTTP(S) only, so a
+// mistyped file:// webhook fails instead of "succeeding", and no redirects to
+// another host.
+func NewAlertClient(timeout time.Duration) *http.Client {
+	return &http.Client{Timeout: timeout, CheckRedirect: sameHostRedirects}
+}
+
+func sameHostRedirects(req *http.Request, via []*http.Request) error {
+	if len(via) >= 5 {
+		return errors.New("too many redirects")
+	}
+	if req.URL.Host != via[0].URL.Host || req.URL.Scheme != via[0].URL.Scheme {
+		return fmt.Errorf("refusing a redirect from %s to another host (%s)", via[0].URL.Host, req.URL.Host)
+	}
+	return nil
 }
 
 // Fetcher gets JSON over HTTP and retries the failures that are worth

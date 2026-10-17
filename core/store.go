@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Store keeps snapshots as plain JSON files:
@@ -46,10 +47,63 @@ func safeName(source string) string {
 		}
 	}
 	n := b.String()
-	if n == "" || n == "." || n == ".." {
+	if n == "" || n == "." || n == ".." || reservedOnWindows(n) {
 		n = "_" + n
 	}
 	return n
+}
+
+func reservedOnWindows(n string) bool {
+	base := strings.ToLower(n)
+	if i := strings.IndexByte(base, '.'); i >= 0 {
+		base = base[:i]
+	}
+	switch base {
+	case "con", "prn", "aux", "nul":
+		return true
+	}
+	if len(base) == 4 && (strings.HasPrefix(base, "com") || strings.HasPrefix(base, "lpt")) && base[3] >= '1' && base[3] <= '9' {
+		return true
+	}
+	return false
+}
+
+// FileKey is the name a source's files are stored under, folded to lower
+// case. Two sources with the same FileKey would share files on some systems
+// and overwrite each other's snapshots, so configurations must keep them
+// distinct.
+func FileKey(source string) string { return strings.ToLower(safeName(source)) }
+
+// Lock takes the store for one run, so overlapping runs (cron next to a
+// watch, or a slow cron run) can't write an older snapshot over a newer one.
+// A lock older than stale is taken to be left over from a crashed run.
+// Call the returned function to release it.
+func (st *Store) Lock(stale time.Duration) (func(), error) {
+	if err := os.MkdirAll(st.Dir, 0o755); err != nil {
+		return nil, err
+	}
+	p := filepath.Join(st.Dir, "lock")
+	for try := 0; ; try++ {
+		f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+		if err == nil {
+			fmt.Fprintf(f, "pid %d at %s\n", os.Getpid(), time.Now().UTC().Format(time.RFC3339))
+			f.Close()
+			return func() { os.Remove(p) }, nil
+		}
+		if !errors.Is(err, os.ErrExist) {
+			return nil, err
+		}
+		info, serr := os.Stat(p)
+		if serr == nil && try == 0 && time.Since(info.ModTime()) > stale {
+			os.Remove(p)
+			continue
+		}
+		since := ""
+		if serr == nil {
+			since = " since " + info.ModTime().UTC().Format(time.RFC3339)
+		}
+		return nil, fmt.Errorf("another run is using %s (lock file %s%s); if none is running, delete the lock file", st.Dir, p, since)
+	}
 }
 
 func (st *Store) latestPath(source string) string {
@@ -110,6 +164,8 @@ func (st *Store) prune(dir string) error {
 			names = append(names, e.Name())
 		}
 	}
+	cleanTemp(dir)
+	cleanTemp(filepath.Join(st.Dir, "latest"))
 	sort.Strings(names)
 	for len(names) > st.keep() {
 		if err := os.Remove(filepath.Join(dir, names[0])); err != nil {
@@ -118,6 +174,23 @@ func (st *Store) prune(dir string) error {
 		names = names[1:]
 	}
 	return nil
+}
+
+// cleanTemp removes temporary files left by a write that crashed: any older
+// than an hour can't belong to a running write.
+func cleanTemp(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		if !strings.HasPrefix(e.Name(), ".tmp-") {
+			continue
+		}
+		if info, err := e.Info(); err == nil && time.Since(info.ModTime()) > time.Hour {
+			os.Remove(filepath.Join(dir, e.Name()))
+		}
+	}
 }
 
 func writeAtomic(path string, b []byte) error {

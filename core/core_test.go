@@ -404,3 +404,78 @@ func TestLoadJSONRejectsUnknownFields(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCrossHostRedirectIsRefused(t *testing.T) {
+	var leaked string
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		leaked = r.Header.Get("x-api-key")
+		w.Write([]byte(`{}`))
+	}))
+	defer other.Close()
+	// 127.0.0.1 and localhost are different hosts to the redirect check.
+	target := strings.Replace(other.URL, "127.0.0.1", "localhost", 1)
+	first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target+"/v1/models", http.StatusFound)
+	}))
+	defer first.Close()
+	f := &Fetcher{Client: NewHTTPClient(2 * time.Second), Attempts: 1}
+	var v any
+	err := f.GetJSON(context.Background(), first.URL+"/v1/models", map[string]string{"x-api-key": "SECRET"}, &v)
+	if err == nil || !strings.Contains(err.Error(), "refusing a redirect") || leaked != "" {
+		t.Fatalf("err %v, key seen by the other host: %q", err, leaked)
+	}
+}
+
+func TestWebhookErrorsHideTheURL(t *testing.T) {
+	outs, _, err := (&AlertConfig{Webhook: &WebhookConfig{URL: "http://127.0.0.1:1/services/T000/B000/SECRETTOKEN"}}).Outputs(NewAlertClient(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	errs := Deliver(context.Background(), outs, testReport(), Warning)
+	if len(errs) != 1 || strings.Contains(errs[0].Error(), "SECRET") || !strings.Contains(errs[0].Error(), "127.0.0.1:1") {
+		t.Fatalf("%v", errs)
+	}
+}
+
+func TestAlertClientRefusesFileURLs(t *testing.T) {
+	outs, _, _ := (&AlertConfig{Webhook: &WebhookConfig{URL: "file:///tmp/hook"}}).Outputs(NewAlertClient(time.Second))
+	if errs := Deliver(context.Background(), outs, testReport(), Warning); len(errs) != 1 {
+		t.Fatal("a file:// webhook counted as delivered")
+	}
+}
+
+func TestLock(t *testing.T) {
+	st := &Store{Dir: t.TempDir()}
+	unlock, err := st.Lock(time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.Lock(time.Hour); err == nil || !strings.Contains(err.Error(), "another run") {
+		t.Fatalf("second lock: %v", err)
+	}
+	unlock()
+	unlock, err = st.Lock(time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A lock older than the stale limit is taken over.
+	old := time.Now().Add(-2 * time.Hour)
+	os.Chtimes(filepath.Join(st.Dir, "lock"), old, old)
+	unlock2, err := st.Lock(time.Hour)
+	if err != nil {
+		t.Fatalf("stale lock not taken over: %v", err)
+	}
+	unlock2()
+	_ = unlock
+}
+
+func TestReservedNamesAndKeys(t *testing.T) {
+	for in, want := range map[string]string{"con": "_con", "NUL.json": "_NUL.json", "com1": "_com1", "console": "console"} {
+		if got := safeName(in); got != want {
+			t.Errorf("safeName(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if FileKey("OpenAI") != FileKey("openai") || FileKey("a b") != FileKey("a/b") {
+		t.Fatal("FileKey doesn't fold")
+	}
+}

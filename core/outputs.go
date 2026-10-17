@@ -13,15 +13,16 @@ import (
 	"net"
 	"net/http"
 	"net/smtp"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// AlertConfig says where reports go besides the terminal. Secrets are never
-// written into the config file: each one names the environment variable that
-// holds it.
+// AlertConfig says where reports go besides the terminal. Secrets are read
+// from environment variables named in the config; only a plain webhook URL
+// without a token may be written into the file itself.
 type AlertConfig struct {
 	// MinSeverity is the lowest severity that triggers an alert ("warning"
 	// when empty). Scan errors always trigger one.
@@ -190,20 +191,26 @@ func (s *slack) Send(ctx context.Context, r *Report, min Severity) error {
 	return post(ctx, s.client, s.url, b)
 }
 
-func post(ctx context.Context, client *http.Client, url string, body []byte) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+func post(ctx context.Context, client *http.Client, target string, body []byte) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	// Webhook URLs carry tokens (Slack's always do): errors name the host only.
+	host := req.URL.Host
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		var ue *url.Error
+		if errors.As(err, &ue) {
+			err = ue.Err
+		}
+		return fmt.Errorf("POST to %s: %v", host, err)
 	}
 	defer resp.Body.Close()
 	io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
 	if resp.StatusCode/100 != 2 {
-		return fmt.Errorf("POST returned %s", resp.Status)
+		return fmt.Errorf("POST to %s returned %s", host, resp.Status)
 	}
 	return nil
 }

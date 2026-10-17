@@ -125,7 +125,7 @@ func TestFailuresAreNeverReportedAsRemovals(t *testing.T) {
 			}, want: "treated as a failed scan"},
 		{name: "wrong type for a field", source: "openrouter",
 			hook: func(w http.ResponseWriter, r *http.Request) bool {
-				w.Write([]byte(`{"data":[{"id":"openai/gpt-4o","context_length":"lots"}]}`))
+				w.Write([]byte(`{"data":[{"id":"openai/gpt-4o","context_length":{"tokens":128000}}]}`))
 				return true
 			}, want: "not valid JSON"},
 		{name: "server too slow", source: "google",

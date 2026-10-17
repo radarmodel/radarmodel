@@ -50,11 +50,13 @@ A report looks like this:
 
 ```
 2026-10-17T09:00:00Z  RadarModel AI: 1 breaking, 1 warning
-openai      BREAKING  gpt-4o *                       gone (possibly renamed to gpt-4o-2026-10)
+openai      BREAKING  gpt-4o *                       gone (confirmed by a second scan; possibly renamed to gpt-4o-2026-10)
 openrouter  WARNING   anthropic/claude-sonnet-4.5 *  input_price 0.000003 -> 0.0000035
 anthropic   ok        no changes (9 items)
 google      ok        2 minor changes below warning (51 items)
 ```
+
+Prices are US dollars per token, as OpenRouter publishes them.
 
 A `*` marks a model you watch.
 
@@ -66,14 +68,30 @@ doesn't page anyone.
 
 | Change to a watched model | Severity |
 |---|---|
-| Gone from the list | breaking |
+| Gone from the list, on two scans in a row | breaking |
+| Gone from the list on one scan | warning (see below) |
 | Context or output limit went down | breaking |
+| Lifecycle became `retired` (Anthropic) | breaking |
+| Lifecycle left `active`, such as `deprecated` (Anthropic) | warning |
+| Got or changed a retirement date (Anthropic `retires_at`, OpenRouter `expiration_date`) | warning |
 | A limit is no longer published | warning |
 | Price went up, or a price appeared or vanished | warning |
-| Got a retirement date (OpenRouter's `expiration_date`) | warning |
 | Lost a supported method (Google) | warning |
 | Named in `watch` but not in the list at all | warning, every run |
 | Anything else: new models, price cuts, bigger limits, name changes | info |
+
+What each provider publishes differs. OpenAI's list has model IDs only, so
+for OpenAI models RadarModel AI can only tell you that a model is gone.
+Anthropic's has limits, lifecycle and retirement dates; Google's has limits
+and supported methods; OpenRouter's has limits, prices and retirement dates.
+
+**Removals are confirmed by a second scan.** The first scan that misses a
+watched model reports a warning and keeps the model in the stored snapshot;
+if the next scan misses it too, that is breaking. A model that is back on the
+next scan is reported as info. This keeps a list that came back short without
+any visible error (a dropped page, a proxy cutting the body cleanly) from
+paging anyone. To report breaking on the first miss, set
+`"confirm_removals": false`.
 
 When a watched model disappears and a new model with the same display name
 appears in the same scan, the report says "possibly renamed to ...".
@@ -84,16 +102,20 @@ A model list that comes back wrong must never look like models disappearing.
 RadarModel AI treats all of these as a failed scan of that provider, reports
 the error, and leaves its stored snapshot untouched:
 
-- an HTTP error, after retrying 408, 429 and 5xx up to three times
-  (Retry-After is honoured, up to 30 seconds)
+- an HTTP error (408, 429 and 5xx get three attempts in all, honouring
+  Retry-After up to 30 seconds; other errors aren't retried)
 - a body that isn't valid JSON, is cut off, or lacks the model list
 - an empty list
-- a page in the middle of a paginated list failing
+- a page in the middle of a paginated list failing, or a paged answer where
+  one page was expected (OpenRouter's `links.next` or `total_count`)
 - a list holding less than half the models of the last one (`min_fraction`)
+- a redirect to another host (refused, so keys never follow it)
 - a timeout
 
 The other providers are scanned as usual. Once the provider behaves again, the
-next scan compares against the last good snapshot, so nothing is missed.
+next scan compares against the last good snapshot, so nothing is missed. A
+list that comes back short with no error at all is what the second-scan
+confirmation above is for.
 
 If a provider really did drop more than half its list, run once with
 `"min_fraction": 0` to accept it, then put the setting back.
@@ -107,6 +129,7 @@ If a provider really did drop more than half its list, run once with
   "interval": "1h",
   "timeout": "30s",
   "min_fraction": 0.5,
+  "confirm_removals": true,
   "state_dir": ".radarmodel",
   "providers": [
     {"type": "openai"},
@@ -139,19 +162,25 @@ If a provider really did drop more than half its list, run once with
   `base_url` points at a proxy or a compatible endpoint; a `file://` URL reads
   saved responses from disk (Linux and macOS).
 - **watch.** `source:model`. In the model part, `*` matches anything,
-  slashes included. Entries naming a source that isn't configured are
-  rejected, so a typo can't leave a model unwatched.
+  slashes included; a source of `*` matches every provider. Entries naming a
+  source that isn't configured are rejected, so a typo can't leave a model
+  unwatched. Source names that differ only in case or punctuation are
+  rejected too, because they would share a snapshot file.
 - **alerts.** Sent when a run has something at or above `min_severity`
   (warning by default), or a provider failed. The webhook gets the JSON
-  report; Slack and email get a text summary. Secrets are always read from
-  environment variables; a variable that is named but not set stops the
-  command instead of quietly turning alerts off. Email uses STARTTLS when the
-  server offers it (port 587).
+  report; Slack and email get a text summary. Keys, Slack URLs and SMTP
+  passwords are read from environment variables named in the config (a
+  webhook may also take a plain `url` when it carries no token). A variable
+  that is named but not set stops the command instead of quietly turning
+  alerts off. Errors name the webhook's host, never its full URL. Email uses
+  STARTTLS when the server offers it (port 587).
 - **interval** applies to `watch`, at least one minute. **timeout** applies to
   each HTTP request.
 - **state_dir** holds the snapshots, relative to the config file:
   `latest/SOURCE.json` and the last 50 in `history/SOURCE/`. Each file is
-  written whole or not at all.
+  written whole or not at all. A `lock` file keeps two runs from using the
+  folder at once; one older than 30 minutes is taken to be left over from a
+  crash.
 
 Unknown fields in the config are errors.
 
@@ -171,20 +200,23 @@ terminal shows (warning by default), `-json` prints the report as JSON,
 keeps the stored snapshots.
 
 `check` exits 0 when nothing is breaking, 1 on a breaking change, and 2 when
-a provider couldn't be scanned or the config is wrong. Use it as a CI gate.
+a provider couldn't be scanned, another run holds the state folder, or the
+config is wrong. Breaking wins: a run with a breaking change and a failed
+provider exits 1, and the report shows both. Use it as a CI gate.
 
 `watch` reports every scan at the terminal. It sends the "not in the list"
-warning for a given model once per run of the command rather than every
-interval.
+warning for a given model once rather than every interval, and again only if
+the model comes back and later goes missing again.
 
 ## How it was tested
 
-Every operation has a test, and the failure tests aim at the main promise:
-a fake API serving all four providers is made to fail in fourteen ways that
-cover every item in the list above, and each test checks that the failure is reported as an error,
-that no change is reported, that the stored snapshot is byte-for-byte the
-same, and that the next good scan finds nothing to report. The results are
-recorded in [test/results](test/results).
+The tests cover the commands, the four providers, the severity rules and the
+alert outputs, and the failure tests aim at the main promise. A fake API
+serving all four providers is made to fail in every way listed above, and
+each test checks that the failure is reported as an error, that no change is
+reported, that the stored snapshot is byte-for-byte the same, and that the
+next good scan finds nothing to report. A live scan of OpenRouter's public
+list is recorded too. The results are in [test/results](test/results).
 
 ## How it works
 

@@ -29,6 +29,12 @@ type Config struct {
 	// than this share of the models in the last one is treated as a failed
 	// scan, not as models disappearing. 0.5 when unset; 0 turns it off.
 	MinFraction *float64 `json:"min_fraction,omitempty"`
+	// ConfirmRemovals holds back a watched model's removal until a second
+	// scan agrees: the first scan that misses it reports a warning, the next
+	// one that still misses it reports breaking. This keeps a list that came
+	// back short without any visible error from paging anyone. True when
+	// unset; false reports breaking on the first scan.
+	ConfirmRemovals *bool `json:"confirm_removals,omitempty"`
 
 	Providers []ProviderConfig `json:"providers"`
 	// Watch lists the models the application uses, as source:model.
@@ -70,7 +76,12 @@ func (c *Config) Validate() (WatchList, error) {
 	if len(c.Providers) == 0 {
 		return WatchList{}, fmt.Errorf("no providers configured")
 	}
+	if c.ConfirmRemovals == nil {
+		v := true
+		c.ConfirmRemovals = &v
+	}
 	names := map[string]bool{}
+	keys := map[string]string{}
 	for i, p := range c.Providers {
 		if _, ok := defaultBase[p.Type]; !ok {
 			return WatchList{}, fmt.Errorf("providers[%d]: type %q is not one of openai, anthropic, google, openrouter", i, p.Type)
@@ -79,7 +90,13 @@ func (c *Config) Validate() (WatchList, error) {
 		if names[n] {
 			return WatchList{}, fmt.Errorf("providers[%d]: name %q is used twice; give one a different name", i, n)
 		}
+		// Names that differ only in case or punctuation would share a
+		// snapshot file and report each other's models as removed.
+		if other, ok := keys[core.FileKey(n)]; ok {
+			return WatchList{}, fmt.Errorf("providers[%d]: name %q is too close to %q (they would share a snapshot file); pick a clearly different name", i, n, other)
+		}
 		names[n] = true
+		keys[core.FileKey(n)] = n
 	}
 	return ParseWatch(c.Watch, names)
 }
@@ -111,6 +128,7 @@ func Run(ctx context.Context, cfg *Config, w WatchList, store *core.Store, opt O
 	if cfg.MinFraction != nil {
 		minFraction = *cfg.MinFraction
 	}
+	confirm := cfg.ConfirmRemovals == nil || *cfg.ConfirmRemovals
 	rep := &core.Report{Product: Product, Version: radarmodel.Version, At: now().UTC(),
 		Results: make([]core.SourceResult, len(cfg.Providers))}
 	var wg sync.WaitGroup
@@ -118,15 +136,19 @@ func Run(ctx context.Context, cfg *Config, w WatchList, store *core.Store, opt O
 		wg.Add(1)
 		go func(i int, p ProviderConfig) {
 			defer wg.Done()
-			rep.Results[i] = scanOne(ctx, f, p, w, store, minFraction, now, opt.DryRun)
+			rep.Results[i] = scanOne(ctx, f, p, w, store, minFraction, confirm, now, opt.DryRun)
 		}(i, p)
 	}
 	wg.Wait()
 	return rep
 }
 
+// pendingAttr marks a watched model kept in the stored snapshot after one
+// scan missed it, so the next scan can confirm the removal.
+const pendingAttr = "radarmodel_pending_removal"
+
 func scanOne(ctx context.Context, f *core.Fetcher, p ProviderConfig, w WatchList, store *core.Store,
-	minFraction float64, now func() time.Time, dryRun bool) core.SourceResult {
+	minFraction float64, confirm bool, now func() time.Time, dryRun bool) core.SourceResult {
 	src := p.source()
 	res := core.SourceResult{Source: src}
 	fail := func(err error) core.SourceResult {
@@ -151,16 +173,44 @@ func scanOne(ctx context.Context, f *core.Fetcher, p ProviderConfig, w WatchList
 		return fail(fmt.Errorf("the list has %d models, down from %d; treated as a failed scan, not as removals (min_fraction %.2f). If the drop is real, run with min_fraction 0 once to accept it",
 			len(next.Items), len(prev.Items), minFraction))
 	}
+	stored := &core.Snapshot{Source: next.Source, Kind: next.Kind, TakenAt: next.TakenAt,
+		Items: append([]core.Item(nil), next.Items...)}
+	removed := map[string]bool{}
 	if prev == nil {
 		res.Baseline = true
 	} else {
+		prev, pending := splitPending(prev)
 		res.Changes = core.Diff(prev, next)
 		Classify(res.Changes, prev, next, w)
-	}
-	removed := map[string]bool{}
-	for _, c := range res.Changes {
-		if c.Kind == core.Removed {
+		prevIdx := prev.Index()
+		for i := range res.Changes {
+			c := &res.Changes[i]
+			if c.Kind != core.Removed {
+				continue
+			}
 			removed[c.ID] = true
+			if !c.Watched || !confirm {
+				continue
+			}
+			if pending[c.ID] {
+				c.Note = joinNote("confirmed by a second scan", c.Note)
+				continue
+			}
+			c.Severity = core.Warning
+			c.Note = joinNote("missing from this scan; breaking if the next scan misses it too", c.Note)
+			held := prevIdx[c.ID]
+			attrs := map[string]string{pendingAttr: "1"}
+			for k, v := range held.Attrs {
+				attrs[k] = v
+			}
+			stored.Items = append(stored.Items, core.Item{ID: held.ID, Attrs: attrs})
+		}
+		nextIdx := next.Index()
+		for id := range pending {
+			if _, ok := nextIdx[id]; ok {
+				res.Changes = append(res.Changes, core.Change{Source: src, Kind: core.Added, ID: id,
+					Severity: core.Info, Watched: w.Watched(src, id), Note: "back after one scan missed it"})
+			}
 		}
 	}
 	for _, c := range Unlisted(src, next, w) {
@@ -168,10 +218,39 @@ func scanOne(ctx context.Context, f *core.Fetcher, p ProviderConfig, w WatchList
 			res.Changes = append(res.Changes, c)
 		}
 	}
+	next = stored
 	if !dryRun {
 		if err := store.Save(next); err != nil {
 			return fail(fmt.Errorf("saving the snapshot: %v", err))
 		}
 	}
 	return res
+}
+
+// splitPending returns a copy of s without the pending-removal marks, and
+// the IDs that carried one.
+func splitPending(s *core.Snapshot) (*core.Snapshot, map[string]bool) {
+	pending := map[string]bool{}
+	out := &core.Snapshot{Source: s.Source, Kind: s.Kind, TakenAt: s.TakenAt}
+	for _, it := range s.Items {
+		if it.Attrs[pendingAttr] != "" {
+			pending[it.ID] = true
+			attrs := map[string]string{}
+			for k, v := range it.Attrs {
+				if k != pendingAttr {
+					attrs[k] = v
+				}
+			}
+			it = core.Item{ID: it.ID, Attrs: attrs}
+		}
+		out.Items = append(out.Items, it)
+	}
+	return out, pending
+}
+
+func joinNote(a, b string) string {
+	if b == "" {
+		return a
+	}
+	return a + "; " + b
 }
