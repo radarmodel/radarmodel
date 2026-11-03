@@ -11,6 +11,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -22,8 +25,25 @@ import (
 // such as x-api-key on a redirect.
 func NewHTTPClient(timeout time.Duration) *http.Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
+	tr.RegisterProtocol("file", http.NewFileTransport(diskFS{}))
 	return &http.Client{Timeout: timeout, Transport: tr, CheckRedirect: sameHostRedirects}
+}
+
+// diskFS serves file:// URLs from the whole disk. On Windows a file URL's path
+// is /C:/dir/file, which http.Dir("/") can't open, so the slash before the
+// drive letter is dropped.
+type diskFS struct{}
+
+func (diskFS) Open(name string) (http.File, error) {
+	return os.Open(filePath(name, runtime.GOOS))
+}
+
+// filePath turns the cleaned path of a file URL into a path on disk.
+func filePath(name, goos string) string {
+	if goos == "windows" && len(name) >= 3 && name[0] == '/' && name[2] == ':' {
+		name = name[1:]
+	}
+	return filepath.FromSlash(name)
 }
 
 // NewAlertClient returns the client used for alerts: plain HTTP(S) only, so a

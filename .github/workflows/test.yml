@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version-file: go.mod
+          go-version: stable
           cache: true
       - name: Verify modules
         run: go mod verify
@@ -60,7 +60,8 @@ jobs:
           go build ./cmd/radarmodel-ai
           go build ./cmd/radarmodel-schema
       - name: Smoke test the built binaries
-        if: runner.os != 'Windows'
+        # Git Bash on Windows.
+        shell: bash
         run: |
           sh scripts/smoke.sh ./radarmodel-ai
           sh scripts/smoke-schema.sh ./radarmodel-schema
@@ -120,7 +121,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version-file: go.mod
+          go-version: stable
           cache: true
       - name: Schema tests against Postgres ${{ matrix.postgres }} and ${{ matrix.mysql }}
         shell: bash

@@ -33,6 +33,8 @@ Usage:
   radarmodel-ai check [-config FILE] [flags]    scan once, compare, report
   radarmodel-ai watch [-config FILE] [flags]    scan on an interval until stopped
   radarmodel-ai show  [-config FILE] SOURCE     list the stored models of a source
+  radarmodel-ai scan  [-config FILE] [flags] [FOLDER...]
+                                               find the models your code uses
   radarmodel-ai version
 
 The config file is radarmodel.json, or $RADARMODEL_CONFIG when set.
@@ -45,6 +47,15 @@ Flags for check and watch:
 
 Exit codes for check: 0 nothing breaking, 1 a breaking change,
 2 a provider couldn't be scanned or the config is wrong.
+
+Flags for scan (folders default to the current one):
+  -write         add the models found to the config's watch list (or write
+                 a new config when there is none); entries are never removed
+  -check         exit 1 when the code uses a model the watch list misses, one
+                 no configured provider serves, or one the provider's last
+                 stored list doesn't have (for CI)
+  -json          print the findings as JSON
+  -exclude GLOB  leave out matching paths (repeatable), e.g. -exclude 'tests/*'
 `
 
 func main() {
@@ -72,6 +83,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdCheck(rest, stdout, stderr, true)
 	case "show":
 		return cmdShow(rest, stdout, stderr)
+	case "scan":
+		return cmdScan(rest, stdout, stderr)
 	}
 	fmt.Fprintf(stderr, "unknown command %q\n\n%s", cmd, usage)
 	return core.ExitError

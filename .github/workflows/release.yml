@@ -101,7 +101,7 @@ jobs:
           - { runner: ubuntu-24.04-arm, goos: linux, goarch: arm64, smoke: true }
           - { runner: macos-latest, goos: darwin, goarch: arm64, smoke: true }
           - { runner: macos-latest, goos: darwin, goarch: amd64, smoke: false }
-          - { runner: windows-latest, goos: windows, goarch: amd64, smoke: false }
+          - { runner: windows-latest, goos: windows, goarch: amd64, smoke: true }
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
     env:
@@ -116,7 +116,7 @@ jobs:
           ref: ${{ needs.plan.outputs.ref }}
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version-file: go.mod
+          go-version: stable
       - run: go mod verify
       - name: Build every command
         run: |

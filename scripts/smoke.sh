@@ -33,8 +33,12 @@ list() {
 }
 list gpt-4o gpt-4o-mini o3
 
+# Git Bash on Windows: the binary needs the Windows path (file:///C:/...).
+root=$work
+if command -v cygpath > /dev/null 2>&1; then root=/$(cygpath -m "$work"); fi
+
 cat > radarmodel.json << EOF2
-{"providers":[{"type":"openai","base_url":"file://$work/api"}],
+{"providers":[{"type":"openai","base_url":"file://$root/api"}],
  "watch":["openai:gpt-4o"]}
 EOF2
 
