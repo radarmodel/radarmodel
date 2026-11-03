@@ -58,7 +58,16 @@ error. `schema/failure_test.go` and `schema/hardening_test.go` are the guard.
 
 ## Where it stands (October 17, 2026)
 
-- **v0.3.0 is out** (2026-11-03, tag on a648032): `radarmodel-ai scan`.
+- **v0.5.0 is out** (2026-11-03, tag on 27639f5): the GitHub Action
+  (action.yml, scripts/action-comment.sh, `check -markdown`). action-test
+  runs it with built binaries on push and, by hand (workflow_dispatch), its
+  download path on all three systems; both passed for 0.5.0.
+- **v0.4.0** (2026-11-03, tag on 41b716c): Mistral, Groq, xAI, Azure OpenAI,
+  Bedrock. Tested against documented response shapes only (no keys in the
+  sandbox); xAI aliases (`grok-4`) may be missing from its list, so the
+  docs suggest `xai:grok-4*`. Snapshots must stay strict about duplicate IDs
+  (a repeated page would otherwise hide one).
+- **v0.3.0** (2026-11-03, tag on a648032): `radarmodel-ai scan`.
   Six assets; the Linux archive matches SHA256SUMS and prints 0.3.0, passes
   smoke.sh and scans the case-study repos. Windows smoke now runs in the
   release. Site post, reference, quick start, badge; softdevstudio note.
@@ -77,9 +86,9 @@ error. `schema/failure_test.go` and `schema/hardening_test.go` are the guard.
 - **The site** (photozeitgeist/radarmodel.com, standard Launch template,
   content and config only) covers both products. softdevstudio.com lists
   RadarModel as the twelfth project, with notes on 0.1.0 and 0.2.0.
-- Next: item 8 of softdev-plan.md, below.
+- Next: item 8 is complete; nothing agreed. Ask the owner.
 
-## In progress: 0.3 to 0.5, item 8 of softdev-plan.md
+## Done: 0.3 to 0.5, item 8 of softdev-plan.md
 
 Approved by YK on 2026-11-03 ("Go"): Phases A, B and C and the upkeep, each
 phase its own release.
