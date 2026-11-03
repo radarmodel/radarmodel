@@ -44,7 +44,7 @@ printf '%s\n### RadarModel AI: 1 breaking\n\n| Source | Severity | Item | Change
 quiet="$work/quiet.md"
 printf '%s\n### RadarModel AI: nothing at warning or above\n\nNo changes at warning or above.\n' '<!-- radarmodel-report -->' > "$quiet"
 
-fail() { echo "FAIL: $1"; cat "$FAKE_LOG" 2>/dev/null; exit 1; }
+fail() { echo "::error::action-comment test: $1"; cat "$FAKE_LOG" 2>/dev/null; cat "$work/out" 2>/dev/null; exit 1; }
 run() { : > "$FAKE_LOG"; : > "$FAKE_LOG.jq"; bash "$here/action-comment.sh" "$@" > "$work/out" 2>&1 || fail "exit $? for $*: $(cat "$work/out")"; }
 
 FAKE_EXISTING= run pr "$drift"
