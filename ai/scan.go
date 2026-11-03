@@ -33,6 +33,10 @@ type ScanOptions struct {
 	Exclude []string
 	// MaxFileBytes skips larger files; 0 means 2 MiB.
 	MaxFileBytes int64
+	// SkipPaths are files and folders left out wherever they are, such as
+	// RadarModel's own config file and state folder, whose watch list and
+	// snapshots name models the code doesn't use.
+	SkipPaths []string
 }
 
 // Location is where a model name was found.
@@ -143,6 +147,12 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 		}
 		f.Locations = append(f.Locations, loc)
 	}
+	var skip []string
+	for _, p := range opt.SkipPaths {
+		if a, err := filepath.Abs(p); err == nil {
+			skip = append(skip, a)
+		}
+	}
 	for _, root := range roots {
 		info, err := os.Stat(root)
 		if err != nil {
@@ -157,7 +167,7 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 			}
 			rel, _ := filepath.Rel(root, p)
 			rel = filepath.ToSlash(rel)
-			if excluded(rel, opt.Exclude) {
+			if excluded(rel, opt.Exclude) || skipped(p, skip) {
 				if d.IsDir() {
 					return filepath.SkipDir
 				}
@@ -447,4 +457,21 @@ func configValue(t string) (string, bool) {
 	v = strings.TrimSpace(strings.TrimRight(strings.TrimSpace(v), ","))
 	v = strings.Trim(v, `"'`)
 	return v, v != ""
+}
+
+// skipped says whether p is one of the absolute paths in skip.
+func skipped(p string, skip []string) bool {
+	if len(skip) == 0 {
+		return false
+	}
+	a, err := filepath.Abs(p)
+	if err != nil {
+		return false
+	}
+	for _, s := range skip {
+		if a == s {
+			return true
+		}
+	}
+	return false
 }

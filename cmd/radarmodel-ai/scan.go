@@ -56,20 +56,26 @@ func cmdScan(args []string, stdout, stderr io.Writer) int {
 		cfg, w, store, providers = c, watch, st, c.Providers
 	}
 
-	res, err := ai.Scan(roots, providers, w, store, ai.ScanOptions{Exclude: exclude})
+	// The config's own watch list and the stored snapshots name models too.
+	skip := []string{*cfgPath}
+	if store != nil {
+		skip = append(skip, store.Dir)
+	}
+	res, err := ai.Scan(roots, providers, w, store, ai.ScanOptions{Exclude: exclude, SkipPaths: skip})
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return core.ExitError
 	}
 
+	// -check fails on models with no source or missing from their source's
+	// list, and on unwatched ones unless -write has just added them.
 	var add []string
-	missing := 0
+	problems := 0
 	for _, f := range res.Found {
 		if f.Source == "" || f.Unlisted {
-			missing++
+			problems++
 		}
 		if f.Source != "" && !f.Watched {
-			missing++
 			add = append(add, f.Entry())
 		}
 	}
@@ -96,7 +102,10 @@ func cmdScan(args []string, stdout, stderr io.Writer) int {
 		}
 		fmt.Fprintf(stderr, "%d %s %s %s\n", len(add), plural(len(add), "model", "models"), verb, *cfgPath)
 	}
-	if *check && missing > 0 && !*write {
+	if !*write {
+		problems += len(add)
+	}
+	if *check && problems > 0 {
 		return core.ExitBreaking
 	}
 	return core.ExitOK

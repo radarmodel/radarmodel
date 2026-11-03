@@ -55,6 +55,12 @@ radarmodel-ai check           # later runs report what changed
 Run `check` from cron or CI, or leave `radarmodel-ai watch` running to scan on
 an interval.
 
+To fill the watch list from your code instead of by hand:
+
+```sh
+radarmodel-ai scan -write .   # adds every model ID the code uses to "watch"
+```
+
 A report looks like this:
 
 ```
@@ -68,6 +74,53 @@ google      ok        2 minor changes below warning (51 items)
 Prices are US dollars per token, as OpenRouter publishes them.
 
 A `*` marks a model you watch.
+
+## Finding the models your code uses
+
+`radarmodel-ai scan [FOLDER]...` reads the code and config files under the
+folders (the current one by default) and lists every model ID they use, where,
+and whether you watch it:
+
+```
+$ radarmodel-ai scan
+41 files read, 4 models found
+anthropic:claude-sonnet-4-5                   watched                            app/llm.py:12
+openai:gpt-4o-mini                            new                                app/llm.py:30, config/prod.yaml:4
+openai:gpt-o4-mini                            not in openai's list (2026-11-03)  agent/defaults.py:9
+openrouter:meta-llama/llama-3.3-70b-instruct  new                                .env.example:3
+```
+
+- `watched`: in your watch list. `new`: used but not watched. `not in
+  ...'s list`: the last stored snapshot of that source (dated) doesn't have
+  it, so the code calls a model the provider doesn't list (a typo, or one
+  already gone). `no ... provider configured`: the config has no source of
+  that type. Without a config file, every provider counts as configured and
+  models show as `found`.
+- It recognises OpenAI, Anthropic and Google model IDs by their shape
+  (`gpt-4o`, `o3-mini`, `claude-sonnet-4-5`, `gemini-2.5-pro`,
+  `models/gemini-2.5-pro`, `text-embedding-3-small`), and `vendor/model`
+  IDs (`openai/gpt-4o`, `anthropic/claude-3.5-sonnet`). A `vendor/model` ID
+  goes to your OpenRouter source when you have one; otherwise to the
+  vendor's own source, as LiteLLM and similar libraries use it
+  (`gemini/gemini-2.5-pro` always goes to Google).
+- It reads string literals and config values (`key: value`, `key=value`,
+  YAML lists, `.env` files), never comments. It skips strings a line only
+  tests a name against (`name.startswith("gpt-4")`, `"o3" in name`), values
+  that are URLs, folders such as `node_modules`, `vendor`, `.git` and
+  `dist`, lock files, binary files and files over 2 MiB, and it doesn't follow
+  symbolic links. `-exclude PATTERN` (repeatable) leaves out more paths.
+- RadarModel's own config file and state folder are left out: their watch
+  list and snapshots name models the code may not use.
+
+Flags: `-write` adds the models found to the config's watch list (creating
+the config with only the providers used if there is none; key order and the
+rest of an existing file are kept); `-check` exits 1 when a model the code
+uses is unwatched, not in its provider's list, or has no source configured,
+for CI; `-json` prints the result as JSON.
+
+It was checked by hand on three open source AI agents (aider, gpt-researcher
+and browser-use): every model ID they call was found, and nothing that isn't
+one ([test/results/scan-agents.md](test/results/scan-agents.md)).
 
 ## What counts as what
 
@@ -200,6 +253,8 @@ radarmodel-ai init  [-config FILE]           write a starter config
 radarmodel-ai check [-config FILE] [flags]   scan once, compare, report
 radarmodel-ai watch [-config FILE] [flags]   scan every interval until stopped
 radarmodel-ai show  [-config FILE] SOURCE    list the stored models of a source
+radarmodel-ai scan  [-config FILE] [flags] [FOLDER]...
+                                             find the model IDs the code uses
 radarmodel-ai version
 ```
 

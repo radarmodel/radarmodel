@@ -73,7 +73,37 @@ error. `schema/failure_test.go` and `schema/hardening_test.go` are the guard.
 - **The site** (photozeitgeist/radarmodel.com, standard Launch template,
   content and config only) covers both products. softdevstudio.com lists
   RadarModel as the twelfth project, with notes on 0.1.0 and 0.2.0.
-- Next: nothing agreed. Item 4 of the plan stays out of v1. Ask the owner.
+- Next: item 8 of softdev-plan.md, below.
+
+## In progress: 0.3 to 0.5, item 8 of softdev-plan.md
+
+Approved by YK on 2026-11-03 ("Go"): Phases A, B and C and the upkeep, each
+phase its own release.
+
+Phase A, 0.3.0: `radarmodel-ai scan`. ai/modelids.go recognises model IDs by
+shape (OpenAI, Anthropic, Google, vendor/model with a digit or `:free`);
+ai/scan.go walks folders, reads string literals and config values (never
+comments; skips prefix and substring tests, URLs, dependency folders, lock
+files, RadarModel's own config and state), assigns each ID to a configured
+source and marks watched and unlisted. `-write` adds them to the watch list
+keeping key order, `-check` fails CI. Done when the scan finds every model
+ID three real agent repos call, checked by hand:
+test/results/scan-agents.md (aider, gpt-researcher, browser-use;
+scripts/scan-case-studies.sh records them).
+
+Phase B, 0.4.0: Bedrock, Azure OpenAI, Mistral, Groq, xAI providers.
+Phase C, 0.5.0: a GitHub Action that posts drift as a PR or issue comment.
+
+Upkeep (with A): workflows on `go-version: stable` (go.mod stays 1.24 for
+the sandbox); file:// URLs work on Windows, so smoke.sh runs there in CI and
+the release.
+
+Steps:
+1. [x] Phase A code, tests, case studies, README
+2. [ ] independent review (two rounds), fixes
+3. [ ] release 0.3.0; site post and pages; softdevstudio note; softdev-plan.md
+4. [ ] Phase B
+5. [ ] Phase C
 
 ## Working here
 

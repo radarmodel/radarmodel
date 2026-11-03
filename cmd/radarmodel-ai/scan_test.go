@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -59,7 +60,8 @@ func TestScanWriteKeepsTheConfig(t *testing.T) {
 	if strings.Index(got, `"interval"`) > strings.Index(got, `"providers"`) || strings.Index(got, `"alerts"`) > strings.Index(got, `"confirm_removals"`) {
 		t.Errorf("key order changed:\n%s", got)
 	}
-	if info, _ := os.Stat(cfg); info.Mode().Perm() != 0o600 {
+	// Windows has no Unix permission bits to keep.
+	if info, _ := os.Stat(cfg); runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Errorf("file mode changed to %v", info.Mode().Perm())
 	}
 	// A second write adds nothing; gemini still needs a provider, so -check
@@ -127,4 +129,61 @@ func hasRow(out, want string) bool {
 		}
 	}
 	return false
+}
+
+// The config file names its watched models; the scan must not count them as
+// code that uses them, or every watched model would look used forever.
+func TestScanSkipsItsOwnConfig(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "radarmodel.json")
+	if err := os.WriteFile(cfg, []byte(`{"providers":[{"type":"openai"}],"watch":["openai:gpt-4o"],"state_dir":"state"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "state"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "state", "models.json"), []byte(`{"id":"gpt-4.1"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte("m = \"gpt-4o-mini\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	code := run([]string{"scan", "-config", cfg, "-json", dir}, &out, &errOut)
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut.String())
+	}
+	s := out.String()
+	if !strings.Contains(s, "gpt-4o-mini") || strings.Contains(s, `"gpt-4o"`) || strings.Contains(s, "gpt-4.1") {
+		t.Fatalf("config or state counted as code:\n%s", s)
+	}
+}
+
+// -check -write adds unwatched models, but a model with no source configured
+// can't be added, so the check must still fail.
+func TestScanCheckWriteStillFailsWithoutSource(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "radarmodel.json")
+	if err := os.WriteFile(cfg, []byte(`{"providers":[{"type":"openai"}],"watch":["openai:gpt-4o"]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte("a = \"gpt-4o-mini\"\nb = \"claude-sonnet-4-5\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if code := run([]string{"scan", "-config", cfg, "-check", "-write", dir}, &out, &errOut); code != core.ExitBreaking {
+		t.Fatalf("exit %d, want %d: %s%s", code, core.ExitBreaking, out.String(), errOut.String())
+	}
+	b, _ := os.ReadFile(cfg)
+	if !strings.Contains(string(b), "openai:gpt-4o-mini") {
+		t.Fatalf("gpt-4o-mini not written:\n%s", b)
+	}
+	// Only openai models used: written, so the check passes.
+	if err := os.WriteFile(filepath.Join(dir, "app.py"), []byte("a = \"gpt-4o-mini\"\nc = \"gpt-4.1\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if code := run([]string{"scan", "-config", cfg, "-check", "-write", dir}, &out, &errOut); code != core.ExitOK {
+		t.Fatalf("exit %d, want 0: %s", code, out.String())
+	}
 }
