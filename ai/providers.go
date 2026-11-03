@@ -293,7 +293,7 @@ func fetchAzure(ctx context.Context, f *core.Fetcher, base, key string) ([]core.
 	return out, nil
 }
 
-var awsRegion = regexp.MustCompile(`^[a-z]{2}(-[a-z]+)+-[0-9]+$`)
+var awsRegion = regexp.MustCompile(`^[a-z]{2,4}(-[a-z]+)+-[0-9]+$`)
 
 // isoDate keeps the date of an RFC 3339 time, so a change of format alone
 // (fractional seconds, a different offset notation) isn't a new date.

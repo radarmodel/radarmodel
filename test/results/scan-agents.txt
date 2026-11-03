@@ -1,4 +1,4 @@
-radarmodel-ai scan on three AI agents, radarmodel-ai 0.3.0
+radarmodel-ai scan on three AI agents, radarmodel-ai 0.4.0
 Recorded 2026-11-03 by scripts/scan-case-studies.sh. No config: all four providers count as configured.
 
 == aider https://github.com/Aider-AI/aider at 5dc9490
@@ -307,7 +307,7 @@ openai:text-embedding-3-small                 found  gpt_researcher/config/varia
 openrouter:openai/gpt-4o                      found  evals/hallucination_eval/evaluate.py:21
 
 == browser-use https://github.com/browser-use/browser-use at b49a68e
-445 files read, 207 models found
+445 files read, 209 models found
 anthropic:claude-3-5-haiku-latest                         found  browser_use/llm/tests/test_chat_models.py:104, browser_use/llm/tests/test_chat_models.py:118
 anthropic:claude-3-5-sonnet                               found  tests/ci/test_coordinate_clicking.py:133
 anthropic:claude-3-5-sonnet-20240620                      found  examples/ui/command_line.py:40, examples/ui/streamlit_demo.py:38
@@ -356,7 +356,9 @@ google:gemma-3n-e2b                                       found  browser_use/llm
 google:gemma-3n-e4b                                       found  browser_use/llm/google/chat.py:44
 google:veo-3.0-generate-001                               found  examples/apps/ad-use/ad_generator.py:238
 groq:llama-3.3-70b-versatile                              found  tests/ci/models/test_llm_groq.py:79, tests/ci/models/test_llm_groq.py:91
+mistral:codestral-embed                                   found  browser_use/llm/vercel/chat.py:146
 mistral:codestral-latest                                  found  browser_use/llm/models.py:110, browser_use/llm/models.py:198, tests/ci/models/test_llm_model_factory.py:41
+mistral:mistral-embed                                     found  browser_use/llm/vercel/chat.py:155
 mistral:mistral-large-latest                              found  browser_use/llm/models.py:107, browser_use/llm/models.py:195, tests/ci/models/test_llm_model_factory.py:38
 mistral:mistral-medium-latest                             found  browser_use/llm/mistral/chat.py:28, browser_use/llm/models.py:108, browser_use/llm/models.py:112, +5 more
 mistral:mistral-small-2506                                found  examples/models/mistral.py:16

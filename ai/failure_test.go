@@ -12,6 +12,7 @@ package ai
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -293,4 +294,28 @@ func TestCancelledRunLeavesSnapshotsAlone(t *testing.T) {
 		}
 	}
 	sameStored(t, h.store, "openai", before)
+}
+
+// A paged list that repeats its first page as the second must be a failed
+// scan: read as one list, whatever the real second page held would look
+// removed (0.4 review, second round).
+func TestRepeatedPageIsAFailedScan(t *testing.T) {
+	h := newHarness(t, "anthropic:claude-sonnet-4-5")
+	if r := h.run(false); r.Errors() != 0 {
+		t.Fatalf("baseline: %s", dump(r))
+	}
+	before := storedBytes(t, h.store, "anthropic")
+	h.fake.hook = func(w http.ResponseWriter, r *http.Request, n int) bool {
+		if !isProvider(r, "anthropic") {
+			return false
+		}
+		more := r.URL.Query().Get("after_id") == ""
+		fmt.Fprintf(w, `{"data":[{"id":"claude-sonnet-4-5"},{"id":"claude-haiku-4-5"}],"has_more":%v,"last_id":"claude-haiku-4-5"}`, more)
+		return true
+	}
+	r := h.run(false)
+	if res := result(t, r, "anthropic"); res.Error == "" || len(res.Changes) != 0 {
+		t.Fatalf("repeated page: %+v", res)
+	}
+	sameStored(t, h.store, "anthropic", before)
 }

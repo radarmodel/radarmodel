@@ -314,7 +314,7 @@ func TestRecognizeMoreProviders(t *testing.T) {
 	yes := map[string]string{
 		"grok-4": "xai:grok-4", "grok-code-fast-1": "xai:grok-code-fast-1", "xai/grok-3-mini": "xai:grok-3-mini",
 		"mistral-large-latest": "mistral:mistral-large-latest", "codestral-2501": "mistral:codestral-2501",
-		"mistral-small-2503": "mistral:mistral-small-2503", "mistral/magistral-medium-2506": "mistral:magistral-medium-2506",
+		"mistral-small-2503": "mistral:mistral-small-2503", "mistral-embed": "mistral:mistral-embed", "mistral:codestral-embed": "mistral:codestral-embed", "mistral/magistral-medium-2506": "mistral:magistral-medium-2506",
 		"llama-3.3-70b-versatile": "groq:llama-3.3-70b-versatile", "groq/llama-3.1-8b-instant": "groq:llama-3.1-8b-instant",
 		"groq/meta-llama/llama-4-scout-17b-16e-instruct": "groq:meta-llama/llama-4-scout-17b-16e-instruct",
 		"groq/openai/gpt-oss-120b":                       "groq:openai/gpt-oss-120b",

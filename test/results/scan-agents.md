@@ -16,7 +16,7 @@ and the results were checked by hand, both ways:
 |---|---|---|---|---|
 | [Aider-AI/aider](https://github.com/Aider-AI/aider) | 5dc9490 | 228 | 246 | 875 |
 | [assafelovic/gpt-researcher](https://github.com/assafelovic/gpt-researcher) | 3582a68 | 528 | 53 | 195 |
-| [browser-use/browser-use](https://github.com/browser-use/browser-use) | b49a68e | 445 | 207 | 463 |
+| [browser-use/browser-use](https://github.com/browser-use/browser-use) | b49a68e | 445 | 209 | 465 |
 
 ## Found
 
@@ -47,8 +47,8 @@ names the models it supports, and RadarModel can't tell the loop apart.
 ## Added in 0.4: Mistral, Groq, xAI, Azure and Bedrock
 
 With the five new providers the scan found 57 more models in aider (36
-Azure, 11 Bedrock, 5 xAI, 4 Groq, 1 Mistral) and 23 in browser-use (15 xAI,
-5 Mistral, 2 Bedrock, 1 Groq); gpt-researcher uses none of them. Each was
+Azure, 11 Bedrock, 5 xAI, 4 Groq, 1 Mistral) and 25 in browser-use (15 xAI,
+7 Mistral, 2 Bedrock, 1 Groq); gpt-researcher uses none of them. Each was
 read at its line: aider's model settings (`bedrock/anthropic.claude-...`,
 `groq/llama3-70b-8192`, `xai/grok-3-beta`), browser-use's Bedrock and
 Mistral clients, its tests, and its list of Vercel AI Gateway names

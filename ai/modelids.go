@@ -26,7 +26,7 @@ var idFamilies = []struct {
 	{XAI, regexp.MustCompile(`^grok-(?:[2-9]|[1-9][0-9]|code-|vision-)[0-9a-z.\-]*$`)},
 	// Mistral's API names end in -latest or a release (mistral-small-2503);
 	// open-weight names (mistral-7b-instruct-v0.2) are other hosts' models.
-	{Mistral, regexp.MustCompile(`^(?:(?:mistral|codestral|pixtral|ministral|magistral|devstral|voxtral)(?:-[0-9a-z.\-]*)?-(?:latest|[0-9]{4})|open-(?:mistral|mixtral)-[0-9a-z.\-]+)$`)},
+	{Mistral, regexp.MustCompile(`^(?:(?:mistral|codestral|pixtral|ministral|magistral|devstral|voxtral)(?:-[0-9a-z.\-]*)?-(?:latest|[0-9]{4})|open-(?:mistral|mixtral)-[0-9a-z.\-]+|(?:mistral|codestral)-embed)$`)},
 	// Groq's own names for the open models it hosts: a size, then
 	// -versatile or -instant (llama-3.3-70b-versatile).
 	{Groq, regexp.MustCompile(`^[a-z][a-z0-9.\-]*-[0-9]+b-(?:versatile|instant)$`)},
@@ -156,7 +156,7 @@ func RecognizeModel(s string) (Candidate, bool) {
 			continue
 		}
 		if f.provider != OpenAI || !strings.HasPrefix(s, "o") {
-			if !hasDigit(s) && s != "aqa" && !(f.provider == Mistral && strings.HasSuffix(s, "-latest")) {
+			if !hasDigit(s) && s != "aqa" && !(f.provider == Mistral && (strings.HasSuffix(s, "-latest") || strings.HasSuffix(s, "-embed"))) {
 				return Candidate{}, false
 			}
 		}
