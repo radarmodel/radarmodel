@@ -81,6 +81,23 @@ $(cat "$drift")" '$b | @json' | jq -r .)
 FAKE_EXISTING=5 FAKE_LAST="$same" run issue "$drift"
 ! grep -q -- '-X' "$FAKE_LOG" || fail "the same report was posted twice"
 
+# A failing source's error text differs run to run; that alone isn't new.
+err1="$work/err1.md"; err2="$work/err2.md"
+printf '%s\n### RadarModel AI: 1 source(s) failed to scan\n\n- **groq** couldn'"'"'t be scanned: dial tcp 1.2.3.4:443: i/o timeout. Its stored snapshot is unchanged.\n' '<!-- radarmodel-report -->' > "$err1"
+sed 's/1\.2\.3\.4/5.6.7.8/' "$err1" > "$err2"
+prev=$(jq -n --arg b "<!-- radarmodel:default -->
+$(cat "$err1")" '$b | @json' | jq -r .)
+FAKE_EXISTING=5 FAKE_LAST="$prev" run issue "$err2"
+! grep -q -- '-X' "$FAKE_LOG" || fail "the same failure posted again"
+
+# Long reports are cut to fit a comment.
+{ head -n 5 "$drift"; for i in $(seq 1 1500); do echo "| openai | **WARNING** | \`m$i\` (watched) | gone, a long line to fill the comment up |"; done; } > "$work/long.md"
+FAKE_EXISTING= run pr "$work/long.md"
+jq -e '(.body | length) < 65536 and (.body | endswith("the rest is in the job summary."))' "$FAKE_LOG.body" > /dev/null || fail "long report not cut"
+
+: > "$FAKE_LOG"
+if COMMENT_KEY='x-->y' bash "$here/action-comment.sh" pr "$drift" > /dev/null 2>&1; then fail "a key that ends the HTML comment was accepted"; fi
+
 FAKE_EXISTING=5 run issue "$quiet"
 ! grep -q -- '-X' "$FAKE_LOG" || fail "quiet report touched the issue"
 

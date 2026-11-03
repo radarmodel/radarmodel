@@ -17,7 +17,8 @@
 #
 # Usage: action-comment.sh pr|issue REPORT.md
 # Environment: GITHUB_REPOSITORY, GITHUB_EVENT_PATH (pr), ISSUE_TITLE and
-# ISSUE_LABEL (issue), COMMENT_KEY (default "default"), GH_TOKEN; gh and jq
+# ISSUE_LABEL (issue), COMMENT_KEY (default "default"), COMMENT_AUTHOR (the
+# login the token posts as, for a GitHub App's token), GH_TOKEN; gh and jq
 # on PATH.
 set -euo pipefail
 
@@ -29,20 +30,32 @@ key="<!-- radarmodel:${COMMENT_KEY:-default} -->"
 
 [ -f "$report" ] || { echo "no report at $report" >&2; exit 1; }
 head -n 1 "$report" | grep -qxF "$marker" || { echo "$report is not a RadarModel report" >&2; exit 1; }
-case "$key" in *$'\n'*) echo "comment key has a line break" >&2; exit 2 ;; esac
+[[ "${COMMENT_KEY:-default}" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "comment key may hold letters, digits, dots, dashes and underscores only" >&2; exit 2; }
 worth=false
 if grep -q '^| Source | Severity' "$report" || grep -q "couldn't be scanned" "$report"; then
 	worth=true
 fi
 text="$key
 $(cat "$report")"
+# GitHub refuses bodies over 65,536 characters.
+if [ "${#text}" -gt 60000 ]; then
+	text="${text:0:60000}
+
+The report is longer than a comment can hold; the rest is in the job summary."
+fi
 body=$(jq -n --arg b "$text" '{body: $b}')
 
 # The account the token posts as: a personal token's user, or the Actions
 # bot for GITHUB_TOKEN (which can't read /user).
-me=$(gh api user --jq .login 2>/dev/null || true)
+me=${COMMENT_AUTHOR:-}
+[ -n "$me" ] || me=$(gh api user --jq .login 2>/dev/null || true)
 [ -n "$me" ] || me='github-actions[bot]'
 mine=".user.login == $(jq -n --arg m "$me" '$m') and (.body | startswith($(jq -n --arg k "$key" '$k')))"
+
+# same reduces a report to what matters for "is this the same report":
+# carriage returns go, and a failed source keeps only its name, because its
+# error text (addresses, timings) differs on every run.
+same() { tr -d '\r' | sed "s/^\(- \*\*.*\*\* couldn't be scanned\):.*/\1/"; }
 
 case "$mode" in
 pr)
@@ -76,7 +89,7 @@ issue)
 		if [ -z "$last" ]; then
 			last=$(gh api "repos/$repo/issues/$number" --jq '.body | @json')
 		fi
-		if [ -n "$last" ] && [ "$(jq -r . <<< "$last" | tr -d '\r')" = "$(printf '%s' "$text" | tr -d '\r')" ]; then
+		if [ -n "$last" ] && [ "$(jq -r . <<< "$last" | same)" = "$(printf '%s' "$text" | same)" ]; then
 			echo "same report as the last one on #$number"
 			exit 0
 		fi

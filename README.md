@@ -301,7 +301,7 @@ provider exits 1, and the report shows both. Use it as a CI gate.
 warning for a given model once rather than every interval, and again only if
 the model comes back and later goes missing again.
 
-## GitHub Action (from 0.5.0)
+## GitHub Action
 
 The action runs `radarmodel-ai check` (or `radarmodel-schema check`), puts
 the report in the job summary, posts it where people will see it, and fails
@@ -342,14 +342,15 @@ jobs:
   unused) means the next run is a new baseline, so run it at least weekly.
 - **Comments.** Each report keeps its own comment (`comment-key`, the
   product by default), and only comments the action's own account wrote are
-  updated. An issue gets a comment only when the report differs from the
+  updated (with a GitHub App's token, set `comment-author` to the app's
+  login, such as `my-app[bot]`). An issue gets a comment only when the report differs from the
   last one. A pull request from a fork has a read-only token: the report
   stays in the job summary and the step warns instead of failing.
 - **Not with `pull_request_target`** and a checkout of the pull request's
   code: the PR's config could send your API keys to its own `base_url`.
   Use `pull_request`.
 - **Inputs:** `product` (`ai` or `schema`), `config`, `min-severity`,
-  `comment`, `issue-title`, `issue-label`, `comment-key`, `state-dir`,
+  `comment`, `issue-title`, `issue-label`, `comment-key`, `comment-author`, `state-dir`,
   `cache`, `scan`, `scan-path`, `fail` (`false` reports without failing),
   `version` (by default the release of the action's own code, also when it's
   pinned by commit).

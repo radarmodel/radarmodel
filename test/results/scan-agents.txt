@@ -1,4 +1,4 @@
-radarmodel-ai scan on three AI agents, radarmodel-ai 0.4.0
+radarmodel-ai scan on three AI agents, radarmodel-ai 0.5.0
 Recorded 2026-11-03 by scripts/scan-case-studies.sh. No config: all four providers count as configured.
 
 == aider https://github.com/Aider-AI/aider at 5dc9490

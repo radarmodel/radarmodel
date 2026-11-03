@@ -107,7 +107,7 @@ Steps:
 2. [x] independent review (two rounds: 8 defects, then 8), fixes with tests
 3. [x] release 0.3.0; site post and pages; softdevstudio note; softdev-plan.md
 4. [x] Phase B: review two rounds (10 findings, then 6; the duplicate-item leniency reverted), release 0.4.0
-5. [ ] Phase C
+5. [x] Phase C: action.yml, check -markdown; review two rounds (8 findings, then 7), release 0.5.0
 
 ## Working here
 

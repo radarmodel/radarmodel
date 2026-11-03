@@ -49,10 +49,10 @@ func TestReportMarkdown(t *testing.T) {
 	(&Report{Product: "P", Results: []SourceResult{{Source: "db", Items: 1, Changes: []Change{
 		{Kind: Removed, ID: "a`` @octocat ``b", Severity: Breaking, Watched: true},
 		{Kind: Removed, ID: "x\r| @y", Severity: Breaking, Watched: true},
-		{Kind: Changed, ID: "z", Field: "name", Old: "a", New: "&#64;org/team", Severity: Warning, Watched: true},
+		{Kind: Changed, ID: "z", Field: "name", Old: "a", New: "&#64;org/team $x$", Severity: Warning, Watched: true},
 	}}}}).WriteMarkdown(&b, Warning)
 	out = b.String()
-	if !strings.Contains(out, "``` a`` @octocat ``b ```") || strings.Contains(out, "\r") || !strings.Contains(out, `\&\#64;org`) {
+	if !strings.Contains(out, "``` a`` @octocat ``b ```") || strings.Contains(out, "\r") || !strings.Contains(out, `\&\#64;org`) || !strings.Contains(out, `\$x\$`) {
 		t.Errorf("escaping:\n%s", out)
 	}
 	for _, line := range strings.Split(out, "\n") {

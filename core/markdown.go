@@ -68,7 +68,7 @@ func mdText(s string) string {
 	var b strings.Builder
 	for _, r := range s {
 		switch r {
-		case '\\', '|', '*', '_', '`', '[', ']', '<', '>', '#', '!', '~', '&':
+		case '\\', '|', '*', '_', '`', '[', ']', '<', '>', '#', '!', '~', '&', '$':
 			b.WriteByte('\\')
 			b.WriteRune(r)
 		case '@':
