@@ -58,7 +58,11 @@ error. `schema/failure_test.go` and `schema/hardening_test.go` are the guard.
 
 ## Where it stands (October 17, 2026)
 
-- **v0.2.0 is out** (RadarModel Schema), published by the release workflow
+- **v0.3.0 is out** (2026-11-03, tag on a648032): `radarmodel-ai scan`.
+  Six assets; the Linux archive matches SHA256SUMS and prints 0.3.0, passes
+  smoke.sh and scans the case-study repos. Windows smoke now runs in the
+  release. Site post, reference, quick start, badge; softdevstudio note.
+- **v0.2.0** (RadarModel Schema), published by the release workflow
   from commit f8c49bb. Checked: the Linux archive matches SHA256SUMS, both
   binaries print 0.2.0 and pass `scripts/smoke.sh` and
   `scripts/smoke-schema.sh`.
@@ -101,7 +105,7 @@ the release.
 Steps:
 1. [x] Phase A code, tests, case studies, README
 2. [x] independent review (two rounds: 8 defects, then 8), fixes with tests
-3. [ ] release 0.3.0; site post and pages; softdevstudio note; softdev-plan.md
+3. [x] release 0.3.0; site post and pages; softdevstudio note; softdev-plan.md
 4. [ ] Phase B
 5. [ ] Phase C
 
