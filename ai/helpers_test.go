@@ -17,7 +17,7 @@ import (
 	"github.com/radarmodel/radarmodel/core"
 )
 
-// fakeAPI serves all four providers' model-list endpoints from one server.
+// fakeAPI serves all nine providers' model-list endpoints from one server.
 // Tests change its lists between runs, or set a hook to make a response
 // fail in a chosen way.
 type fakeAPI struct {
@@ -28,7 +28,11 @@ type fakeAPI struct {
 	anthropicExtra map[string]map[string]any
 	google         []googleModel
 	openrouter     []orModel
-	pageSize       int // Anthropic and Google page size; 0 means everything on one page
+	// The OpenAI-style lists of Mistral, Groq and xAI, Azure's and Bedrock's,
+	// as the JSON objects each API returns, served under /mistral, /groq,
+	// /xai, /azure and /bedrock.
+	mistral, groq, xai, azure, bedrock []map[string]any
+	pageSize                           int // Anthropic and Google page size; 0 means everything on one page
 	// hook may write a response itself and return true to stop the normal one.
 	hook  func(w http.ResponseWriter, r *http.Request, n int) bool
 	calls int
@@ -67,6 +71,36 @@ func newFake(t *testing.T) (*fakeAPI, *httptest.Server) {
 			{ID: "meta-llama/llama-3.3-70b-instruct", Name: "Meta: Llama 3.3 70B", Context: 131072, MaxOut: nil, In: "0.0000001", Out: "0.00000032"},
 		},
 	}
+	f.mistral = []map[string]any{
+		{"id": "mistral-large-latest", "object": "model", "owned_by": "mistralai", "name": "mistral-large-2411", "max_context_length": 131072, "deprecation": nil},
+		{"id": "mistral-small-2503", "object": "model", "owned_by": "mistralai", "max_context_length": 131072},
+		{"id": "codestral-2501", "object": "model", "owned_by": "mistralai", "max_context_length": 262144},
+	}
+	f.groq = []map[string]any{
+		{"id": "llama-3.3-70b-versatile", "object": "model", "owned_by": "Meta", "active": true, "context_window": 131072, "max_completion_tokens": 32768},
+		{"id": "openai/gpt-oss-120b", "object": "model", "owned_by": "OpenAI", "active": true, "context_window": 131072, "max_completion_tokens": 65536},
+		{"id": "qwen/qwen3-32b", "object": "model", "owned_by": "Alibaba Cloud", "active": true, "context_window": 131072, "max_completion_tokens": 40960},
+	}
+	f.xai = []map[string]any{
+		{"id": "grok-4", "object": "model", "owned_by": "xai", "created": 1752019200},
+		{"id": "grok-3-mini", "object": "model", "owned_by": "xai", "created": 1743724800},
+		{"id": "grok-code-fast-1", "object": "model", "owned_by": "xai", "created": 1755993600},
+	}
+	f.azure = []map[string]any{
+		{"id": "gpt-4o-2024-11-20", "object": "model", "status": "succeeded", "lifecycle_status": "generally-available", "created_at": 1732060800,
+			"capabilities": map[string]any{"chat_completion": true, "inference": true}, "deprecation": map[string]any{"inference": 1798675200}},
+		{"id": "gpt-4.1", "object": "model", "status": "succeeded", "lifecycle_status": "generally-available", "created_at": 1744675200,
+			"deprecation": map[string]any{"inference": 1807833600}},
+		{"id": "o3-mini", "object": "model", "status": "succeeded", "lifecycle_status": "preview", "created_at": 1738281600, "deprecation": map[string]any{}},
+	}
+	f.bedrock = []map[string]any{
+		{"modelId": "anthropic.claude-sonnet-4-5-20250929-v1:0", "modelName": "Claude Sonnet 4.5", "providerName": "Anthropic",
+			"modelLifecycle": map[string]any{"status": "ACTIVE"}},
+		{"modelId": "meta.llama3-3-70b-instruct-v1:0", "modelName": "Llama 3.3 70B Instruct", "providerName": "Meta",
+			"modelLifecycle": map[string]any{"status": "ACTIVE"}},
+		{"modelId": "amazon.nova-pro-v1:0", "modelName": "Nova Pro", "providerName": "Amazon",
+			"modelLifecycle": map[string]any{"status": "ACTIVE"}},
+	}
 	srv := httptest.NewServer(http.HandlerFunc(f.serve))
 	t.Cleanup(srv.Close)
 	return f, srv
@@ -86,6 +120,16 @@ func (f *fakeAPI) serve(w http.ResponseWriter, r *http.Request) {
 	defer f.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	switch r.URL.Path {
+	case "/mistral/v1/models":
+		json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": f.mistral})
+	case "/groq/v1/models":
+		json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": f.groq})
+	case "/xai/v1/models":
+		json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": f.xai})
+	case "/azure/openai/models":
+		json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": f.azure})
+	case "/bedrock/foundation-models":
+		json.NewEncoder(w).Encode(map[string]any{"modelSummaries": f.bedrock})
 	case "/v1/models":
 		if r.Header.Get("anthropic-version") != "" {
 			f.serveAnthropic(w, r)
@@ -182,6 +226,14 @@ func env(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "sk-test-openai-SECRET")
 	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-test-SECRET")
 	t.Setenv("GEMINI_API_KEY", "AIza-test-SECRET")
+	t.Setenv("MISTRAL_API_KEY", "mistral-test-SECRET")
+	t.Setenv("GROQ_API_KEY", "gsk-test-SECRET")
+	t.Setenv("XAI_API_KEY", "xai-test-SECRET")
+	t.Setenv("AZURE_OPENAI_API_KEY", "azure-test-SECRET")
+	t.Setenv("AWS_ACCESS_KEY_ID", "AKIDTEST")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "aws-test-SECRET")
+	t.Setenv("AWS_SESSION_TOKEN", "")
+	t.Setenv("AWS_REGION", "us-west-2")
 }
 
 // config points every provider at the fake server.
@@ -193,6 +245,11 @@ func config(t *testing.T, base string, watch ...string) (*Config, WatchList) {
 			{Type: Anthropic, BaseURL: base},
 			{Type: Google, BaseURL: base},
 			{Type: OpenRouter, BaseURL: base},
+			{Type: Mistral, BaseURL: base + "/mistral"},
+			{Type: Groq, BaseURL: base + "/groq"},
+			{Type: XAI, BaseURL: base + "/xai"},
+			{Type: Azure, BaseURL: base + "/azure"},
+			{Type: Bedrock, BaseURL: base + "/bedrock"},
 		},
 		Watch: watch,
 	}

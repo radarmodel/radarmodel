@@ -2,196 +2,253 @@ radarmodel-ai scan on three AI agents, radarmodel-ai 0.3.0
 Recorded 2026-11-03 by scripts/scan-case-studies.sh. No config: all four providers count as configured.
 
 == aider https://github.com/Aider-AI/aider at 5dc9490
-228 files read, 189 models found
-anthropic:claude-2                               found  aider/models.py:70
-anthropic:claude-3-5-haiku-20241022              found  aider/deprecated.py:17, aider/deprecated.py:92, aider/models.py:73, +15 more
-anthropic:claude-3-5-sonnet                      found  aider/website/_data/architect.yml:180, aider/website/_includes/leaderboard.js:185
-anthropic:claude-3-5-sonnet-20240620             found  aider/models.py:76, aider/resources/model-settings.yml:148, aider/resources/model-settings.yml:158, +3 more
-anthropic:claude-3-5-sonnet-20241022             found  aider/models.py:77, aider/resources/model-settings.yml:386, aider/resources/model-settings.yml:396, +6 more
-anthropic:claude-3-7-sonnet-20250219             found  aider/models.py:78, aider/resources/model-settings.yml:217, aider/resources/model-settings.yml:227
-anthropic:claude-3-7-sonnet-latest               found  aider/resources/model-settings.yml:231, aider/resources/model-settings.yml:242
-anthropic:claude-3-haiku-20240307                found  aider/models.py:72, aider/resources/model-settings.yml:442, aider/resources/model-settings.yml:443, +1 more
-anthropic:claude-3-opus-20240229                 found  aider/deprecated.py:3, aider/deprecated.py:90, aider/models.py:74, +4 more
-anthropic:claude-3-sonnet-20240229               found  aider/models.py:75, aider/resources/model-settings.yml:145, aider/website/_data/edit_leaderboard.yml:26
-anthropic:claude-haiku-4-5                       found  aider/models.py:92, aider/models.py:102, aider/resources/model-settings.yml:1861, +8 more
-anthropic:claude-haiku-4-5-20251001              found  aider/models.py:93, aider/resources/model-settings.yml:1921
-anthropic:claude-opus-4-1                        found  aider/models.py:81
-anthropic:claude-opus-4-1-20250805               found  aider/models.py:82
-anthropic:claude-opus-4-20250514                 found  aider/models.py:80, aider/resources/model-settings.yml:1788
-anthropic:claude-opus-4-5                        found  aider/models.py:83
-anthropic:claude-opus-4-5-20251101               found  aider/models.py:84
-anthropic:claude-opus-4-6                        found  aider/models.py:85, aider/resources/model-settings.yml:1884
-anthropic:claude-opus-4-6-20260205               found  aider/models.py:86
-anthropic:claude-opus-4-7                        found  aider/models.py:87, aider/models.py:103, aider/resources/model-settings.yml:1871, +1 more
-anthropic:claude-opus-4-7-20260416               found  aider/models.py:88
-anthropic:claude-sonnet-4-20250514               found  aider/models.py:79, aider/resources/model-settings.yml:1598, aider/resources/model-settings.yml:1608, +1 more
-anthropic:claude-sonnet-4-5                      found  aider/models.py:89, aider/resources/model-settings.yml:1892, aider/resources/model-settings.yml:1905, +2 more
-anthropic:claude-sonnet-4-5-20250929             found  aider/models.py:90, aider/resources/model-settings.yml:1897
-anthropic:claude-sonnet-4-6                      found  aider/models.py:91, aider/models.py:101, aider/resources/model-settings.yml:1859, +4 more
-google:gemini-1.5-flash-002                      found  aider/resources/model-settings.yml:526
-google:gemini-1.5-flash-8b-exp-0827              found  aider/website/_data/edit_leaderboard.yml:886
-google:gemini-1.5-flash-8b-exp-0924              found  aider/website/_data/edit_leaderboard.yml:1258
-google:gemini-1.5-flash-exp-0827                 found  aider/website/_data/edit_leaderboard.yml:863
-google:gemini-1.5-flash-latest                   found  aider/website/_data/edit_leaderboard.yml:437
-google:gemini-1.5-pro                            found  aider/resources/model-settings.yml:528
-google:gemini-1.5-pro-001                        found  aider/website/_data/edit_leaderboard.yml:50
-google:gemini-1.5-pro-002                        found  aider/resources/model-settings.yml:522, aider/website/_data/edit_leaderboard.yml:1211
-google:gemini-1.5-pro-exp-0827                   found  aider/website/_data/edit_leaderboard.yml:839
-google:gemini-1.5-pro-latest                     found  aider/resources/model-settings.yml:532, aider/website/_data/refactor_leaderboard.yml:3
-google:gemini-2.0-flash                          found  aider/resources/model-settings.yml:544, aider/resources/model-settings.yml:953
-google:gemini-2.0-flash-exp                      found  aider/resources/model-settings.yml:540, aider/website/_data/edit_leaderboard.yml:2164, aider/website/_data/o1_polyglot_leaderboard.yml:237, +1 more
-google:gemini-2.0-flash-thinking-exp-01-21       found  aider/website/_data/polyglot_leaderboard.yml:550
-google:gemini-2.5-flash                          found  aider/resources/model-metadata.json:657, aider/resources/model-settings.yml:1397, aider/resources/model-settings.yml:1464, +1 more
-google:gemini-2.5-flash-lite                     found  aider/models.py:114, aider/resources/model-settings.yml:1418, aider/resources/model-settings.yml:1425
-google:gemini-2.5-flash-lite-preview-06-17       found  aider/resources/model-metadata.json:684, aider/resources/model-settings.yml:1468
-google:gemini-2.5-flash-lite-preview-09-2025     found  aider/resources/model-settings.yml:1432, aider/resources/model-settings.yml:1439
-google:gemini-2.5-flash-preview-04-17            found  aider/resources/model-settings.yml:959, aider/resources/model-settings.yml:1363, aider/resources/model-settings.yml:1368, +2 more
-google:gemini-2.5-flash-preview-09-2025          found  aider/resources/model-settings.yml:1404, aider/resources/model-settings.yml:1411
-google:gemini-2.5-pro                            found  aider/models.py:117, aider/resources/model-metadata.json:629, aider/resources/model-settings.yml:1460
-google:gemini-2.5-pro-exp-03-25                  found  aider/models.py:120, aider/onboarding.py:67, aider/resources/model-metadata.json:186, +2 more
-google:gemini-2.5-pro-preview-03-25              found  aider/resources/model-settings.yml:949
-google:gemini-2.5-pro-preview-05-06              found  aider/resources/model-metadata.json:513, aider/resources/model-metadata.json:571, aider/resources/model-settings.yml:1384
-google:gemini-2.5-pro-preview-06-05              found  aider/resources/model-metadata.json:542, aider/resources/model-metadata.json:600, aider/resources/model-settings.yml:1390
-google:gemini-3-flash-preview                    found  aider/resources/model-settings.yml:1554
-google:gemini-3-pro-preview                      found  aider/models.py:118, aider/models.py:119, aider/resources/model-settings.yml:1531
-google:gemini-exp-1114                           found  aider/website/_data/edit_leaderboard.yml:1929
-google:gemini-exp-1121                           found  aider/website/_data/edit_leaderboard.yml:1905
-google:gemini-exp-1206                           found  aider/resources/model-settings.yml:536, aider/website/_data/o1_polyglot_leaderboard.yml:211, aider/website/_data/polyglot_leaderboard.yml:263
-google:gemma-3-27b-it                            found  aider/resources/model-settings.yml:940, aider/website/_data/polyglot_leaderboard.yml:760
-openai:gpt-3.5                                   found  tests/basic/test_models.py:353
-openai:gpt-3.5-turbo                             found  aider/deprecated.py:53, aider/deprecated.py:97, aider/history.py:131, +34 more
-openai:gpt-3.5-turbo-0125                        found  aider/models.py:62, aider/resources/model-settings.yml:5, aider/website/_data/edit_leaderboard.yml:72
-openai:gpt-3.5-turbo-0301                        found  aider/models.py:59, aider/website/_data/edit_leaderboard.yml:95, benchmark/rungrid.py:11
-openai:gpt-3.5-turbo-0613                        found  aider/models.py:60, aider/resources/model-settings.yml:13, aider/website/_data/edit_leaderboard.yml:118, +1 more
-openai:gpt-3.5-turbo-1106                        found  aider/models.py:61, aider/resources/model-settings.yml:9, aider/website/_data/edit_leaderboard.yml:140, +2 more
-openai:gpt-3.5-turbo-16k                         found  aider/models.py:63, tests/basic/test_models.py:37
-openai:gpt-3.5-turbo-16k-0613                    found  aider/models.py:64, aider/resources/model-settings.yml:17
-openai:gpt-4                                     found  aider/history.py:131, aider/models.py:38, tests/basic/test_aws_credentials.py:93, +39 more
-openai:gpt-4-0125-preview                        found  aider/models.py:50, aider/resources/model-settings.yml:95, aider/website/_data/edit_leaderboard.yml:162, +3 more
-openai:gpt-4-0314                                found  aider/models.py:42, aider/resources/model-settings.yml:116, aider/website/_data/edit_leaderboard.yml:185
-openai:gpt-4-0613                                found  aider/deprecated.py:24, aider/deprecated.py:93, aider/models.py:43, +9 more
-openai:gpt-4-1106-preview                        found  aider/deprecated.py:46, aider/deprecated.py:96, aider/models.py:49, +8 more
-openai:gpt-4-1106-vision-preview                 found  aider/models.py:52
-openai:gpt-4-32k                                 found  aider/models.py:44, tests/basic/test_main.py:560
-openai:gpt-4-32k-0314                            found  aider/models.py:45
-openai:gpt-4-32k-0613                            found  aider/models.py:46, aider/resources/model-settings.yml:129
-openai:gpt-4-turbo                               found  aider/models.py:47, aider/resources/model-settings.yml:28, tests/basic/test_scripting.py:26
-openai:gpt-4-turbo-2024-04-09                    found  aider/models.py:48, aider/resources/model-settings.yml:21, benchmark/plots.py:259, +1 more
-openai:gpt-4-turbo-preview                       found  aider/models.py:41
-openai:gpt-4-vision-preview                      found  aider/models.py:51, aider/resources/model-settings.yml:110
-openai:gpt-4-xxx                                 found  .github/ISSUE_TEMPLATE/issue.yml:14
-openai:gpt-4.1                                   found  aider/resources/model-settings.yml:1076, aider/resources/model-settings.yml:1137, aider/resources/model-settings.yml:1148, +3 more
-openai:gpt-4.1-mini                              found  aider/resources/model-settings.yml:1078, aider/resources/model-settings.yml:1082, aider/resources/model-settings.yml:1108, +4 more
-openai:gpt-4.1-nano                              found  aider/resources/model-settings.yml:3002, aider/resources/model-settings.yml:3004, aider/website/_data/polyglot_leaderboard.yml:1072
-openai:gpt-4.5-preview                           found  aider/resources/model-settings.yml:888, aider/website/_data/polyglot_leaderboard.yml:654
-openai:gpt-4o                                    found  aider/deprecated.py:32, aider/deprecated.py:94, aider/models.py:30, +29 more
-openai:gpt-4o-2024-05-13                         found  aider/models.py:40, aider/website/_data/code-in-json.yml:45, aider/website/_data/code-in-json.yml:150, +9 more
-openai:gpt-4o-2024-08-06                         found  aider/resources/model-settings.yml:52, aider/website/_data/code-in-json.yml:3, aider/website/_data/code-in-json.yml:24, +15 more
-openai:gpt-4o-2024-11-20                         found  aider/resources/model-settings.yml:60, aider/website/_data/edit_leaderboard.yml:1835, aider/website/_data/o1_polyglot_leaderboard.yml:55, +1 more
-openai:gpt-4o-mini                               found  aider/deprecated.py:39, aider/deprecated.py:95, aider/models.py:53, +34 more
-openai:gpt-4o-mini-2024-07-18                    found  aider/models.py:54, aider/website/_data/o1_polyglot_leaderboard.yml:3, aider/website/_data/polyglot_leaderboard.yml:29
-openai:gpt-5                                     found  aider/models.py:463, aider/resources/model-settings.yml:2166, aider/resources/model-settings.yml:2179
-openai:gpt-5-2025-08-07                          found  aider/models.py:463, aider/resources/model-settings.yml:2186
-openai:gpt-5-chat                                found  aider/resources/model-settings.yml:2263
-openai:gpt-5-chat-latest                         found  aider/resources/model-settings.yml:2270
-openai:gpt-5-codex                               found  aider/resources/model-settings.yml:2379
-openai:gpt-5-mini                                found  aider/resources/model-settings.yml:2177, aider/resources/model-settings.yml:2211, aider/resources/model-settings.yml:2235, +3 more
-openai:gpt-5-mini-2025-08-07                     found  aider/resources/model-settings.yml:2242
-openai:gpt-5-nano                                found  aider/resources/model-settings.yml:2168, aider/resources/model-settings.yml:2195, aider/resources/model-settings.yml:2222, +19 more
-openai:gpt-5-nano-2025-08-07                     found  aider/resources/model-settings.yml:2188, aider/resources/model-settings.yml:2203, aider/resources/model-settings.yml:2230, +3 more
-openai:gpt-5-pro                                 found  aider/resources/model-settings.yml:2174
-openai:gpt-5.1                                   found  aider/resources/model-settings.yml:2193
-openai:gpt-5.1-2025-11-13                        found  aider/resources/model-settings.yml:2201
-openai:gpt-5.1-chat                              found  aider/resources/model-settings.yml:2277
-openai:gpt-5.1-chat-latest                       found  aider/resources/model-settings.yml:2284
-openai:gpt-5.1-codex                             found  aider/resources/model-settings.yml:2386
-openai:gpt-5.1-codex-max                         found  aider/resources/model-settings.yml:3086
-openai:gpt-5.1-codex-mini                        found  aider/resources/model-settings.yml:3072, aider/resources/model-settings.yml:3088
-openai:gpt-5.2                                   found  aider/resources/model-settings.yml:2213, aider/resources/model-settings.yml:2220
-openai:gpt-5.2-2025-12-11                        found  aider/resources/model-settings.yml:2228
-openai:gpt-5.2-chat-latest                       found  aider/resources/model-settings.yml:2291
-openai:gpt-5.2-codex                             found  aider/resources/model-settings.yml:3040
-openai:gpt-5.2-pro                               found  aider/resources/model-settings.yml:2208
-openai:gpt-5.3                                   found  aider/resources/model-settings.yml:2298, aider/resources/model-settings.yml:2311
-openai:gpt-5.3-chat-latest                       found  aider/resources/model-settings.yml:2318
-openai:gpt-5.3-codex                             found  aider/resources/model-settings.yml:3048
-openai:gpt-5.3-pro                               found  aider/resources/model-settings.yml:2306
-openai:gpt-5.4                                   found  aider/resources/model-settings.yml:2325, aider/resources/model-settings.yml:2338
-openai:gpt-5.4-chat-latest                       found  aider/resources/model-settings.yml:2345
-openai:gpt-5.4-pro                               found  aider/resources/model-settings.yml:2333
-openai:gpt-5.5                                   found  aider/models.py:55, aider/resources/model-settings.yml:2352, aider/resources/model-settings.yml:2365, +4 more
-openai:gpt-5.5-chat-latest                       found  aider/models.py:57, aider/resources/model-settings.yml:2372, tests/basic/test_models.py:561
-openai:gpt-5.5-pro                               found  aider/models.py:56, aider/resources/model-settings.yml:2360, tests/basic/test_models.py:581
-openai:o1                                        found  aider/models.py:34, aider/resources/model-settings.yml:773, aider/website/_data/edit_leaderboard.yml:2187, +2 more
-openai:o1-mini                                   found  aider/deprecated.py:70, aider/deprecated.py:99, aider/models.py:36, +12 more
-openai:o1-mini-2024-09-12                        found  aider/website/_data/edit_leaderboard.yml:2210, aider/website/_data/o1_polyglot_leaderboard.yml:185, aider/website/_data/polyglot_leaderboard.yml:237
-openai:o1-preview                                found  aider/deprecated.py:77, aider/deprecated.py:100, aider/models.py:35, +13 more
-openai:o1-pro                                    found  aider/resources/model-settings.yml:3016
-openai:o1-something                              found  tests/basic/test_models.py:364
-openai:o3                                        found  aider/resources/model-settings.yml:1132, aider/website/_data/polyglot_leaderboard.yml:1544
-openai:o3-mini                                   found  aider/models.py:37, aider/resources/model-settings.yml:848
-openai:o3-pro                                    found  aider/resources/model-settings.yml:1143
-openai:o4-mini                                   found  aider/resources/model-settings.yml:1352
-openai:tts-1                                     found  scripts/recording_audio.py:106
-openai:whisper-1                                 found  aider/voice.py:170
-openrouter:anthropic/claude-3-5-haiku-20241022   found  aider/resources/model-settings.yml:163, aider/resources/model-settings.yml:176, aider/resources/model-settings.yml:190, +6 more
-openrouter:anthropic/claude-3-5-sonnet-20240620  found  aider/resources/model-settings.yml:161, aider/resources/model-settings.yml:171
-openrouter:anthropic/claude-3-5-sonnet-20241022  found  aider/resources/model-settings.yml:174, aider/resources/model-settings.yml:184, aider/resources/model-settings.yml:383
-openrouter:anthropic/claude-3-5-sonnet-latest    found  aider/resources/model-settings.yml:373
-openrouter:anthropic/claude-3-7-sonnet-20250219  found  aider/deprecated.py:10, aider/deprecated.py:91, aider/resources/model-metadata.json:149, +4 more
-openrouter:anthropic/claude-3-7-sonnet-latest    found  aider/resources/model-settings.yml:202, aider/resources/model-settings.yml:213
-openrouter:anthropic/claude-3-haiku-20240307     found  aider/resources/model-settings.yml:399, aider/resources/model-settings.yml:400
-openrouter:anthropic/claude-opus-4-20250514      found  aider/resources/model-settings.yml:1802
-openrouter:anthropic/claude-sonnet-4-20250514    found  aider/resources/model-settings.yml:1612, aider/resources/model-settings.yml:1622, aider/resources/model-settings.yml:1812
-openrouter:mistralai/mistral-medium-3            found  tests/basic/test_openrouter.py:26
-openrouter:nousresearch/hermes-3-llama-3.1-405b  found  aider/website/_data/edit_leaderboard.yml:909
-openrouter:openai/chatgpt-4o-latest              found  aider/website/_data/edit_leaderboard.yml:1485
-openrouter:openai/gpt-4.1                        found  aider/resources/model-settings.yml:1005, aider/resources/model-settings.yml:1084, aider/resources/model-settings.yml:1159, +5 more
-openrouter:openai/gpt-4.1-mini                   found  aider/resources/model-settings.yml:1002, aider/resources/model-settings.yml:1086, aider/resources/model-settings.yml:1090, +7 more
-openrouter:openai/gpt-4.1-nano                   found  aider/resources/model-settings.yml:3009, aider/resources/model-settings.yml:3011
-openrouter:openai/gpt-4.5-preview                found  aider/resources/model-metadata.json:169, aider/resources/model-settings.yml:898
-openrouter:openai/gpt-4o                         found  aider/resources/model-settings.yml:35, aider/resources/model-settings.yml:676, aider/resources/model-settings.yml:701, +3 more
-openrouter:openai/gpt-4o-2024-08-06              found  aider/resources/model-settings.yml:44
-openrouter:openai/gpt-4o-2024-11-20              found  aider/resources/model-settings.yml:68
-openrouter:openai/gpt-4o-mini                    found  aider/resources/model-settings.yml:90, aider/resources/model-settings.yml:91, aider/resources/model-settings.yml:672, +3 more
-openrouter:openai/gpt-5                          found  aider/resources/model-settings.yml:2588, aider/resources/model-settings.yml:2600
-openrouter:openai/gpt-5-2025-08-07               found  aider/resources/model-settings.yml:2607
-openrouter:openai/gpt-5-chat                     found  aider/resources/model-settings.yml:2682
-openrouter:openai/gpt-5-chat-latest              found  aider/resources/model-settings.yml:2689
-openrouter:openai/gpt-5-mini                     found  aider/resources/model-settings.yml:2598, aider/resources/model-settings.yml:2631, aider/resources/model-settings.yml:2654, +3 more
-openrouter:openai/gpt-5-mini-2025-08-07          found  aider/resources/model-settings.yml:2661
-openrouter:openai/gpt-5-nano                     found  aider/resources/model-settings.yml:2590, aider/resources/model-settings.yml:2616, aider/resources/model-settings.yml:2642, +17 more
-openrouter:openai/gpt-5-nano-2025-08-07          found  aider/resources/model-settings.yml:2609, aider/resources/model-settings.yml:2623, aider/resources/model-settings.yml:2649, +3 more
-openrouter:openai/gpt-5-pro                      found  aider/resources/model-settings.yml:2595
-openrouter:openai/gpt-5.1                        found  aider/resources/model-settings.yml:2614
-openrouter:openai/gpt-5.1-2025-11-13             found  aider/resources/model-settings.yml:2621
-openrouter:openai/gpt-5.1-chat                   found  aider/resources/model-settings.yml:2696
-openrouter:openai/gpt-5.1-chat-latest            found  aider/resources/model-settings.yml:2703
-openrouter:openai/gpt-5.1-codex-max              found  aider/resources/model-settings.yml:3093
-openrouter:openai/gpt-5.1-codex-mini             found  aider/resources/model-settings.yml:3079, aider/resources/model-settings.yml:3095
-openrouter:openai/gpt-5.2                        found  aider/resources/model-settings.yml:2633, aider/resources/model-settings.yml:2640
-openrouter:openai/gpt-5.2-2025-12-11             found  aider/resources/model-settings.yml:2647
-openrouter:openai/gpt-5.2-chat-latest            found  aider/resources/model-settings.yml:2710
-openrouter:openai/gpt-5.2-codex                  found  aider/resources/model-settings.yml:3056
-openrouter:openai/gpt-5.2-pro                    found  aider/resources/model-settings.yml:2628
-openrouter:openai/gpt-5.3                        found  aider/resources/model-settings.yml:2717, aider/resources/model-settings.yml:2729
-openrouter:openai/gpt-5.3-chat-latest            found  aider/resources/model-settings.yml:2736
-openrouter:openai/gpt-5.3-codex                  found  aider/resources/model-settings.yml:3064
-openrouter:openai/gpt-5.3-pro                    found  aider/resources/model-settings.yml:2724
-openrouter:openai/gpt-5.4                        found  aider/resources/model-settings.yml:2743, aider/resources/model-settings.yml:2755
-openrouter:openai/gpt-5.4-chat-latest            found  aider/resources/model-settings.yml:2762
-openrouter:openai/gpt-5.4-pro                    found  aider/resources/model-settings.yml:2750
-openrouter:openai/gpt-5.5                        found  aider/resources/model-settings.yml:2769, aider/resources/model-settings.yml:2781, tests/basic/test_models.py:562, +1 more
-openrouter:openai/gpt-5.5-chat-latest            found  aider/resources/model-settings.yml:2788, tests/basic/test_models.py:563
-openrouter:openai/gpt-5.5-pro                    found  aider/resources/model-settings.yml:2776, tests/basic/test_models.py:582
-openrouter:openai/o1                             found  aider/resources/model-settings.yml:762
-openrouter:openai/o1-mini                        found  aider/resources/model-settings.yml:671
-openrouter:openai/o1-preview                     found  aider/resources/model-settings.yml:695
-openrouter:openai/o1-pro                         found  aider/resources/model-settings.yml:3028
-openrouter:openai/o3                             found  aider/resources/model-settings.yml:1187
-openrouter:openai/o3-mini                        found  aider/resources/model-settings.yml:838
-openrouter:openai/o3-pro                         found  aider/resources/model-settings.yml:1198
-openrouter:openai/o4-mini                        found  aider/resources/model-settings.yml:1000, aider/resources/model-settings.yml:1154, aider/resources/model-settings.yml:1209, +2 more
+228 files read, 246 models found
+anthropic:claude-2                                 found  aider/models.py:70
+anthropic:claude-3-5-haiku-20241022                found  aider/deprecated.py:17, aider/deprecated.py:92, aider/models.py:73, +15 more
+anthropic:claude-3-5-sonnet                        found  aider/website/_data/architect.yml:180, aider/website/_includes/leaderboard.js:185
+anthropic:claude-3-5-sonnet-20240620               found  aider/models.py:76, aider/resources/model-settings.yml:148, aider/resources/model-settings.yml:158, +3 more
+anthropic:claude-3-5-sonnet-20241022               found  aider/models.py:77, aider/resources/model-settings.yml:386, aider/resources/model-settings.yml:396, +6 more
+anthropic:claude-3-7-sonnet-20250219               found  aider/models.py:78, aider/resources/model-settings.yml:217, aider/resources/model-settings.yml:227
+anthropic:claude-3-7-sonnet-latest                 found  aider/resources/model-settings.yml:231, aider/resources/model-settings.yml:242
+anthropic:claude-3-haiku-20240307                  found  aider/models.py:72, aider/resources/model-settings.yml:442, aider/resources/model-settings.yml:443, +1 more
+anthropic:claude-3-opus-20240229                   found  aider/deprecated.py:3, aider/deprecated.py:90, aider/models.py:74, +4 more
+anthropic:claude-3-sonnet-20240229                 found  aider/models.py:75, aider/resources/model-settings.yml:145, aider/website/_data/edit_leaderboard.yml:26
+anthropic:claude-haiku-4-5                         found  aider/models.py:92, aider/models.py:102, aider/resources/model-settings.yml:1861, +8 more
+anthropic:claude-haiku-4-5-20251001                found  aider/models.py:93, aider/resources/model-settings.yml:1921
+anthropic:claude-opus-4-1                          found  aider/models.py:81
+anthropic:claude-opus-4-1-20250805                 found  aider/models.py:82
+anthropic:claude-opus-4-20250514                   found  aider/models.py:80, aider/resources/model-settings.yml:1788
+anthropic:claude-opus-4-5                          found  aider/models.py:83
+anthropic:claude-opus-4-5-20251101                 found  aider/models.py:84
+anthropic:claude-opus-4-6                          found  aider/models.py:85, aider/resources/model-settings.yml:1884
+anthropic:claude-opus-4-6-20260205                 found  aider/models.py:86
+anthropic:claude-opus-4-7                          found  aider/models.py:87, aider/models.py:103, aider/resources/model-settings.yml:1871, +1 more
+anthropic:claude-opus-4-7-20260416                 found  aider/models.py:88
+anthropic:claude-sonnet-4-20250514                 found  aider/models.py:79, aider/resources/model-settings.yml:1598, aider/resources/model-settings.yml:1608, +1 more
+anthropic:claude-sonnet-4-5                        found  aider/models.py:89, aider/resources/model-settings.yml:1892, aider/resources/model-settings.yml:1905, +2 more
+anthropic:claude-sonnet-4-5-20250929               found  aider/models.py:90, aider/resources/model-settings.yml:1897
+anthropic:claude-sonnet-4-6                        found  aider/models.py:91, aider/models.py:101, aider/resources/model-settings.yml:1859, +4 more
+azure:gpt-4.1                                      found  aider/resources/model-settings.yml:1027, aider/resources/model-settings.yml:1092, aider/resources/model-settings.yml:1181, +5 more
+azure:gpt-4.1-mini                                 found  aider/resources/model-settings.yml:1024, aider/resources/model-settings.yml:1094, aider/resources/model-settings.yml:1098, +7 more
+azure:gpt-4o                                       found  aider/resources/model-settings.yml:684, aider/resources/model-settings.yml:710, aider/resources/model-settings.yml:719, +1 more
+azure:gpt-4o-mini                                  found  aider/resources/model-settings.yml:680, aider/resources/model-settings.yml:706, aider/resources/model-settings.yml:715, +1 more
+azure:gpt-5                                        found  aider/resources/model-settings.yml:2393, aider/resources/model-settings.yml:2405
+azure:gpt-5-2025-08-07                             found  aider/resources/model-settings.yml:2412
+azure:gpt-5-chat                                   found  aider/resources/model-settings.yml:2475
+azure:gpt-5-chat-latest                            found  aider/resources/model-settings.yml:2482
+azure:gpt-5-mini                                   found  aider/resources/model-settings.yml:2403, aider/resources/model-settings.yml:2447, aider/resources/model-settings.yml:2520, +2 more
+azure:gpt-5-mini-2025-08-07                        found  aider/resources/model-settings.yml:2454
+azure:gpt-5-nano                                   found  aider/resources/model-settings.yml:2395, aider/resources/model-settings.yml:2421, aider/resources/model-settings.yml:2435, +14 more
+azure:gpt-5-nano-2025-08-07                        found  aider/resources/model-settings.yml:2414, aider/resources/model-settings.yml:2428, aider/resources/model-settings.yml:2442, +3 more
+azure:gpt-5-pro                                    found  aider/resources/model-settings.yml:2400
+azure:gpt-5.1                                      found  aider/resources/model-settings.yml:2419
+azure:gpt-5.1-2025-11-13                           found  aider/resources/model-settings.yml:2426
+azure:gpt-5.1-chat                                 found  aider/resources/model-settings.yml:2489
+azure:gpt-5.1-chat-latest                          found  aider/resources/model-settings.yml:2496
+azure:gpt-5.2                                      found  aider/resources/model-settings.yml:2433
+azure:gpt-5.2-2025-12-11                           found  aider/resources/model-settings.yml:2440
+azure:gpt-5.2-chat-latest                          found  aider/resources/model-settings.yml:2503
+azure:gpt-5.3                                      found  aider/resources/model-settings.yml:2510, aider/resources/model-settings.yml:2522
+azure:gpt-5.3-chat-latest                          found  aider/resources/model-settings.yml:2529
+azure:gpt-5.3-pro                                  found  aider/resources/model-settings.yml:2517
+azure:gpt-5.4                                      found  aider/resources/model-settings.yml:2536, aider/resources/model-settings.yml:2548
+azure:gpt-5.4-chat-latest                          found  aider/resources/model-settings.yml:2555
+azure:gpt-5.4-pro                                  found  aider/resources/model-settings.yml:2543
+azure:gpt-5.5                                      found  aider/resources/model-settings.yml:2562, aider/resources/model-settings.yml:2574, tests/basic/test_models.py:564, +1 more
+azure:gpt-5.5-chat-latest                          found  aider/resources/model-settings.yml:2581, tests/basic/test_models.py:565
+azure:gpt-5.5-pro                                  found  aider/resources/model-settings.yml:2569, tests/basic/test_models.py:583
+azure:o1                                           found  aider/resources/model-settings.yml:713
+azure:o1-mini                                      found  aider/resources/model-settings.yml:679
+azure:o1-preview                                   found  aider/resources/model-settings.yml:704
+azure:o3                                           found  aider/resources/model-settings.yml:1297
+azure:o3-mini                                      found  aider/resources/model-settings.yml:878
+azure:o3-pro                                       found  aider/resources/model-settings.yml:1308
+azure:o4-mini                                      found  aider/resources/model-settings.yml:1022, aider/resources/model-settings.yml:1176, aider/resources/model-settings.yml:1231, +2 more
+bedrock:anthropic.claude-3-5-haiku-20241022-v1:0   found  aider/resources/model-settings.yml:249, aider/resources/model-settings.yml:264, aider/resources/model-settings.yml:362, +11 more
+bedrock:anthropic.claude-3-5-sonnet-20241022-v2:0  found  aider/resources/model-settings.yml:360, aider/resources/model-settings.yml:370
+bedrock:anthropic.claude-3-7-sonnet-20250219-v1:0  found  aider/resources/model-settings.yml:246, aider/resources/model-settings.yml:257, aider/resources/model-settings.yml:261, +2 more
+bedrock:anthropic.claude-3-sonnet-20240229-v1:0    found  tests/basic/test_models.py:215
+bedrock:anthropic.claude-haiku-4-5-20251001-v1:0   found  aider/resources/model-settings.yml:1941, aider/resources/model-settings.yml:1954, aider/resources/model-settings.yml:1967, +2 more
+bedrock:anthropic.claude-opus-4-20250514-v1:0      found  aider/resources/model-settings.yml:1816, aider/resources/model-settings.yml:2047, aider/resources/model-settings.yml:2061
+bedrock:anthropic.claude-opus-4-6-v1               found  aider/resources/model-settings.yml:1939
+bedrock:anthropic.claude-opus-4-7-v1               found  aider/resources/model-settings.yml:1952
+bedrock:anthropic.claude-sonnet-4-20250514-v1:0    found  aider/resources/model-settings.yml:1626, aider/resources/model-settings.yml:1636, aider/resources/model-settings.yml:1640, +10 more
+bedrock:anthropic.claude-sonnet-4-5-20250929-v1:0  found  aider/resources/model-settings.yml:1654, aider/resources/model-settings.yml:1664, aider/resources/model-settings.yml:1947, +3 more
+bedrock:anthropic.claude-v2                        found  tests/basic/test_aws_credentials.py:29, tests/basic/test_aws_credentials.py:124, tests/basic/test_aws_credentials.py:156
+google:gemini-1.5-flash-002                        found  aider/resources/model-settings.yml:526
+google:gemini-1.5-flash-8b-exp-0827                found  aider/website/_data/edit_leaderboard.yml:886
+google:gemini-1.5-flash-8b-exp-0924                found  aider/website/_data/edit_leaderboard.yml:1258
+google:gemini-1.5-flash-exp-0827                   found  aider/website/_data/edit_leaderboard.yml:863
+google:gemini-1.5-flash-latest                     found  aider/website/_data/edit_leaderboard.yml:437
+google:gemini-1.5-pro                              found  aider/resources/model-settings.yml:528
+google:gemini-1.5-pro-001                          found  aider/website/_data/edit_leaderboard.yml:50
+google:gemini-1.5-pro-002                          found  aider/resources/model-settings.yml:522, aider/website/_data/edit_leaderboard.yml:1211
+google:gemini-1.5-pro-exp-0827                     found  aider/website/_data/edit_leaderboard.yml:839
+google:gemini-1.5-pro-latest                       found  aider/resources/model-settings.yml:532, aider/website/_data/refactor_leaderboard.yml:3
+google:gemini-2.0-flash                            found  aider/resources/model-settings.yml:544, aider/resources/model-settings.yml:953
+google:gemini-2.0-flash-exp                        found  aider/resources/model-settings.yml:540, aider/website/_data/edit_leaderboard.yml:2164, aider/website/_data/o1_polyglot_leaderboard.yml:237, +1 more
+google:gemini-2.0-flash-thinking-exp-01-21         found  aider/website/_data/polyglot_leaderboard.yml:550
+google:gemini-2.5-flash                            found  aider/resources/model-metadata.json:657, aider/resources/model-settings.yml:1397, aider/resources/model-settings.yml:1464, +1 more
+google:gemini-2.5-flash-lite                       found  aider/models.py:114, aider/resources/model-settings.yml:1418, aider/resources/model-settings.yml:1425
+google:gemini-2.5-flash-lite-preview-06-17         found  aider/resources/model-metadata.json:684, aider/resources/model-settings.yml:1468
+google:gemini-2.5-flash-lite-preview-09-2025       found  aider/resources/model-settings.yml:1432, aider/resources/model-settings.yml:1439
+google:gemini-2.5-flash-preview-04-17              found  aider/resources/model-settings.yml:959, aider/resources/model-settings.yml:1363, aider/resources/model-settings.yml:1368, +2 more
+google:gemini-2.5-flash-preview-09-2025            found  aider/resources/model-settings.yml:1404, aider/resources/model-settings.yml:1411
+google:gemini-2.5-pro                              found  aider/models.py:117, aider/resources/model-metadata.json:629, aider/resources/model-settings.yml:1460
+google:gemini-2.5-pro-exp-03-25                    found  aider/models.py:120, aider/onboarding.py:67, aider/resources/model-metadata.json:186, +2 more
+google:gemini-2.5-pro-preview-03-25                found  aider/resources/model-settings.yml:949
+google:gemini-2.5-pro-preview-05-06                found  aider/resources/model-metadata.json:513, aider/resources/model-metadata.json:571, aider/resources/model-settings.yml:1384
+google:gemini-2.5-pro-preview-06-05                found  aider/resources/model-metadata.json:542, aider/resources/model-metadata.json:600, aider/resources/model-settings.yml:1390
+google:gemini-3-flash-preview                      found  aider/resources/model-settings.yml:1554
+google:gemini-3-pro-preview                        found  aider/models.py:118, aider/models.py:119, aider/resources/model-settings.yml:1531
+google:gemini-exp-1114                             found  aider/website/_data/edit_leaderboard.yml:1929
+google:gemini-exp-1121                             found  aider/website/_data/edit_leaderboard.yml:1905
+google:gemini-exp-1206                             found  aider/resources/model-settings.yml:536, aider/website/_data/o1_polyglot_leaderboard.yml:211, aider/website/_data/polyglot_leaderboard.yml:263
+google:gemma-3-27b-it                              found  aider/resources/model-settings.yml:940, aider/website/_data/polyglot_leaderboard.yml:760
+groq:llama3-70b-8192                               found  aider/resources/model-settings.yml:512
+groq:llama3-8b-8192                                found  aider/resources/model-settings.yml:514
+groq:qwen-2.5-coder-32b                            found  aider/resources/model-settings.yml:925, aider/resources/model-settings.yml:927
+groq:qwen-qwq-32b                                  found  aider/resources/model-settings.yml:922
+mistral:codestral-2405                             found  aider/website/_data/edit_leaderboard.yml:460
+openai:gpt-3.5                                     found  tests/basic/test_models.py:353
+openai:gpt-3.5-turbo                               found  aider/deprecated.py:53, aider/deprecated.py:97, aider/history.py:131, +34 more
+openai:gpt-3.5-turbo-0125                          found  aider/models.py:62, aider/resources/model-settings.yml:5, aider/website/_data/edit_leaderboard.yml:72
+openai:gpt-3.5-turbo-0301                          found  aider/models.py:59, aider/website/_data/edit_leaderboard.yml:95, benchmark/rungrid.py:11
+openai:gpt-3.5-turbo-0613                          found  aider/models.py:60, aider/resources/model-settings.yml:13, aider/website/_data/edit_leaderboard.yml:118, +1 more
+openai:gpt-3.5-turbo-1106                          found  aider/models.py:61, aider/resources/model-settings.yml:9, aider/website/_data/edit_leaderboard.yml:140, +2 more
+openai:gpt-3.5-turbo-16k                           found  aider/models.py:63, tests/basic/test_models.py:37
+openai:gpt-3.5-turbo-16k-0613                      found  aider/models.py:64, aider/resources/model-settings.yml:17
+openai:gpt-4                                       found  aider/history.py:131, aider/models.py:38, tests/basic/test_aws_credentials.py:93, +39 more
+openai:gpt-4-0125-preview                          found  aider/models.py:50, aider/resources/model-settings.yml:95, aider/website/_data/edit_leaderboard.yml:162, +3 more
+openai:gpt-4-0314                                  found  aider/models.py:42, aider/resources/model-settings.yml:116, aider/website/_data/edit_leaderboard.yml:185
+openai:gpt-4-0613                                  found  aider/deprecated.py:24, aider/deprecated.py:93, aider/models.py:43, +9 more
+openai:gpt-4-1106-preview                          found  aider/deprecated.py:46, aider/deprecated.py:96, aider/models.py:49, +8 more
+openai:gpt-4-1106-vision-preview                   found  aider/models.py:52
+openai:gpt-4-32k                                   found  aider/models.py:44, tests/basic/test_main.py:560
+openai:gpt-4-32k-0314                              found  aider/models.py:45
+openai:gpt-4-32k-0613                              found  aider/models.py:46, aider/resources/model-settings.yml:129
+openai:gpt-4-turbo                                 found  aider/models.py:47, aider/resources/model-settings.yml:28, tests/basic/test_scripting.py:26
+openai:gpt-4-turbo-2024-04-09                      found  aider/models.py:48, aider/resources/model-settings.yml:21, benchmark/plots.py:259, +1 more
+openai:gpt-4-turbo-preview                         found  aider/models.py:41
+openai:gpt-4-vision-preview                        found  aider/models.py:51, aider/resources/model-settings.yml:110
+openai:gpt-4-xxx                                   found  .github/ISSUE_TEMPLATE/issue.yml:14
+openai:gpt-4.1                                     found  aider/resources/model-settings.yml:1076, aider/resources/model-settings.yml:1137, aider/resources/model-settings.yml:1148, +3 more
+openai:gpt-4.1-mini                                found  aider/resources/model-settings.yml:1078, aider/resources/model-settings.yml:1082, aider/resources/model-settings.yml:1108, +4 more
+openai:gpt-4.1-nano                                found  aider/resources/model-settings.yml:3002, aider/resources/model-settings.yml:3004, aider/website/_data/polyglot_leaderboard.yml:1072
+openai:gpt-4.5-preview                             found  aider/resources/model-settings.yml:888, aider/website/_data/polyglot_leaderboard.yml:654
+openai:gpt-4o                                      found  aider/deprecated.py:32, aider/deprecated.py:94, aider/models.py:30, +29 more
+openai:gpt-4o-2024-05-13                           found  aider/models.py:40, aider/website/_data/code-in-json.yml:45, aider/website/_data/code-in-json.yml:150, +9 more
+openai:gpt-4o-2024-08-06                           found  aider/resources/model-settings.yml:52, aider/website/_data/code-in-json.yml:3, aider/website/_data/code-in-json.yml:24, +15 more
+openai:gpt-4o-2024-11-20                           found  aider/resources/model-settings.yml:60, aider/website/_data/edit_leaderboard.yml:1835, aider/website/_data/o1_polyglot_leaderboard.yml:55, +1 more
+openai:gpt-4o-mini                                 found  aider/deprecated.py:39, aider/deprecated.py:95, aider/models.py:53, +34 more
+openai:gpt-4o-mini-2024-07-18                      found  aider/models.py:54, aider/website/_data/o1_polyglot_leaderboard.yml:3, aider/website/_data/polyglot_leaderboard.yml:29
+openai:gpt-5                                       found  aider/models.py:463, aider/resources/model-settings.yml:2166, aider/resources/model-settings.yml:2179
+openai:gpt-5-2025-08-07                            found  aider/models.py:463, aider/resources/model-settings.yml:2186
+openai:gpt-5-chat                                  found  aider/resources/model-settings.yml:2263
+openai:gpt-5-chat-latest                           found  aider/resources/model-settings.yml:2270
+openai:gpt-5-codex                                 found  aider/resources/model-settings.yml:2379
+openai:gpt-5-mini                                  found  aider/resources/model-settings.yml:2177, aider/resources/model-settings.yml:2211, aider/resources/model-settings.yml:2235, +3 more
+openai:gpt-5-mini-2025-08-07                       found  aider/resources/model-settings.yml:2242
+openai:gpt-5-nano                                  found  aider/resources/model-settings.yml:2168, aider/resources/model-settings.yml:2195, aider/resources/model-settings.yml:2222, +19 more
+openai:gpt-5-nano-2025-08-07                       found  aider/resources/model-settings.yml:2188, aider/resources/model-settings.yml:2203, aider/resources/model-settings.yml:2230, +3 more
+openai:gpt-5-pro                                   found  aider/resources/model-settings.yml:2174
+openai:gpt-5.1                                     found  aider/resources/model-settings.yml:2193
+openai:gpt-5.1-2025-11-13                          found  aider/resources/model-settings.yml:2201
+openai:gpt-5.1-chat                                found  aider/resources/model-settings.yml:2277
+openai:gpt-5.1-chat-latest                         found  aider/resources/model-settings.yml:2284
+openai:gpt-5.1-codex                               found  aider/resources/model-settings.yml:2386
+openai:gpt-5.1-codex-max                           found  aider/resources/model-settings.yml:3086
+openai:gpt-5.1-codex-mini                          found  aider/resources/model-settings.yml:3072, aider/resources/model-settings.yml:3088
+openai:gpt-5.2                                     found  aider/resources/model-settings.yml:2213, aider/resources/model-settings.yml:2220
+openai:gpt-5.2-2025-12-11                          found  aider/resources/model-settings.yml:2228
+openai:gpt-5.2-chat-latest                         found  aider/resources/model-settings.yml:2291
+openai:gpt-5.2-codex                               found  aider/resources/model-settings.yml:3040
+openai:gpt-5.2-pro                                 found  aider/resources/model-settings.yml:2208
+openai:gpt-5.3                                     found  aider/resources/model-settings.yml:2298, aider/resources/model-settings.yml:2311
+openai:gpt-5.3-chat-latest                         found  aider/resources/model-settings.yml:2318
+openai:gpt-5.3-codex                               found  aider/resources/model-settings.yml:3048
+openai:gpt-5.3-pro                                 found  aider/resources/model-settings.yml:2306
+openai:gpt-5.4                                     found  aider/resources/model-settings.yml:2325, aider/resources/model-settings.yml:2338
+openai:gpt-5.4-chat-latest                         found  aider/resources/model-settings.yml:2345
+openai:gpt-5.4-pro                                 found  aider/resources/model-settings.yml:2333
+openai:gpt-5.5                                     found  aider/models.py:55, aider/resources/model-settings.yml:2352, aider/resources/model-settings.yml:2365, +4 more
+openai:gpt-5.5-chat-latest                         found  aider/models.py:57, aider/resources/model-settings.yml:2372, tests/basic/test_models.py:561
+openai:gpt-5.5-pro                                 found  aider/models.py:56, aider/resources/model-settings.yml:2360, tests/basic/test_models.py:581
+openai:o1                                          found  aider/models.py:34, aider/resources/model-settings.yml:773, aider/website/_data/edit_leaderboard.yml:2187, +2 more
+openai:o1-mini                                     found  aider/deprecated.py:70, aider/deprecated.py:99, aider/models.py:36, +12 more
+openai:o1-mini-2024-09-12                          found  aider/website/_data/edit_leaderboard.yml:2210, aider/website/_data/o1_polyglot_leaderboard.yml:185, aider/website/_data/polyglot_leaderboard.yml:237
+openai:o1-preview                                  found  aider/deprecated.py:77, aider/deprecated.py:100, aider/models.py:35, +13 more
+openai:o1-pro                                      found  aider/resources/model-settings.yml:3016
+openai:o1-something                                found  tests/basic/test_models.py:364
+openai:o3                                          found  aider/resources/model-settings.yml:1132, aider/website/_data/polyglot_leaderboard.yml:1544
+openai:o3-mini                                     found  aider/models.py:37, aider/resources/model-settings.yml:848
+openai:o3-pro                                      found  aider/resources/model-settings.yml:1143
+openai:o4-mini                                     found  aider/resources/model-settings.yml:1352
+openai:tts-1                                       found  scripts/recording_audio.py:106
+openai:whisper-1                                   found  aider/voice.py:170
+openrouter:anthropic/claude-3-5-haiku-20241022     found  aider/resources/model-settings.yml:163, aider/resources/model-settings.yml:176, aider/resources/model-settings.yml:190, +6 more
+openrouter:anthropic/claude-3-5-sonnet-20240620    found  aider/resources/model-settings.yml:161, aider/resources/model-settings.yml:171
+openrouter:anthropic/claude-3-5-sonnet-20241022    found  aider/resources/model-settings.yml:174, aider/resources/model-settings.yml:184, aider/resources/model-settings.yml:383
+openrouter:anthropic/claude-3-5-sonnet-latest      found  aider/resources/model-settings.yml:373
+openrouter:anthropic/claude-3-7-sonnet-20250219    found  aider/deprecated.py:10, aider/deprecated.py:91, aider/resources/model-metadata.json:149, +4 more
+openrouter:anthropic/claude-3-7-sonnet-latest      found  aider/resources/model-settings.yml:202, aider/resources/model-settings.yml:213
+openrouter:anthropic/claude-3-haiku-20240307       found  aider/resources/model-settings.yml:399, aider/resources/model-settings.yml:400
+openrouter:anthropic/claude-opus-4-20250514        found  aider/resources/model-settings.yml:1802
+openrouter:anthropic/claude-sonnet-4-20250514      found  aider/resources/model-settings.yml:1612, aider/resources/model-settings.yml:1622, aider/resources/model-settings.yml:1812
+openrouter:mistralai/mistral-medium-3              found  tests/basic/test_openrouter.py:26
+openrouter:nousresearch/hermes-3-llama-3.1-405b    found  aider/website/_data/edit_leaderboard.yml:909
+openrouter:openai/chatgpt-4o-latest                found  aider/website/_data/edit_leaderboard.yml:1485
+openrouter:openai/gpt-4.1                          found  aider/resources/model-settings.yml:1005, aider/resources/model-settings.yml:1084, aider/resources/model-settings.yml:1159, +5 more
+openrouter:openai/gpt-4.1-mini                     found  aider/resources/model-settings.yml:1002, aider/resources/model-settings.yml:1086, aider/resources/model-settings.yml:1090, +7 more
+openrouter:openai/gpt-4.1-nano                     found  aider/resources/model-settings.yml:3009, aider/resources/model-settings.yml:3011
+openrouter:openai/gpt-4.5-preview                  found  aider/resources/model-metadata.json:169, aider/resources/model-settings.yml:898
+openrouter:openai/gpt-4o                           found  aider/resources/model-settings.yml:35, aider/resources/model-settings.yml:676, aider/resources/model-settings.yml:701, +3 more
+openrouter:openai/gpt-4o-2024-08-06                found  aider/resources/model-settings.yml:44
+openrouter:openai/gpt-4o-2024-11-20                found  aider/resources/model-settings.yml:68
+openrouter:openai/gpt-4o-mini                      found  aider/resources/model-settings.yml:90, aider/resources/model-settings.yml:91, aider/resources/model-settings.yml:672, +3 more
+openrouter:openai/gpt-5                            found  aider/resources/model-settings.yml:2588, aider/resources/model-settings.yml:2600
+openrouter:openai/gpt-5-2025-08-07                 found  aider/resources/model-settings.yml:2607
+openrouter:openai/gpt-5-chat                       found  aider/resources/model-settings.yml:2682
+openrouter:openai/gpt-5-chat-latest                found  aider/resources/model-settings.yml:2689
+openrouter:openai/gpt-5-mini                       found  aider/resources/model-settings.yml:2598, aider/resources/model-settings.yml:2631, aider/resources/model-settings.yml:2654, +3 more
+openrouter:openai/gpt-5-mini-2025-08-07            found  aider/resources/model-settings.yml:2661
+openrouter:openai/gpt-5-nano                       found  aider/resources/model-settings.yml:2590, aider/resources/model-settings.yml:2616, aider/resources/model-settings.yml:2642, +17 more
+openrouter:openai/gpt-5-nano-2025-08-07            found  aider/resources/model-settings.yml:2609, aider/resources/model-settings.yml:2623, aider/resources/model-settings.yml:2649, +3 more
+openrouter:openai/gpt-5-pro                        found  aider/resources/model-settings.yml:2595
+openrouter:openai/gpt-5.1                          found  aider/resources/model-settings.yml:2614
+openrouter:openai/gpt-5.1-2025-11-13               found  aider/resources/model-settings.yml:2621
+openrouter:openai/gpt-5.1-chat                     found  aider/resources/model-settings.yml:2696
+openrouter:openai/gpt-5.1-chat-latest              found  aider/resources/model-settings.yml:2703
+openrouter:openai/gpt-5.1-codex-max                found  aider/resources/model-settings.yml:3093
+openrouter:openai/gpt-5.1-codex-mini               found  aider/resources/model-settings.yml:3079, aider/resources/model-settings.yml:3095
+openrouter:openai/gpt-5.2                          found  aider/resources/model-settings.yml:2633, aider/resources/model-settings.yml:2640
+openrouter:openai/gpt-5.2-2025-12-11               found  aider/resources/model-settings.yml:2647
+openrouter:openai/gpt-5.2-chat-latest              found  aider/resources/model-settings.yml:2710
+openrouter:openai/gpt-5.2-codex                    found  aider/resources/model-settings.yml:3056
+openrouter:openai/gpt-5.2-pro                      found  aider/resources/model-settings.yml:2628
+openrouter:openai/gpt-5.3                          found  aider/resources/model-settings.yml:2717, aider/resources/model-settings.yml:2729
+openrouter:openai/gpt-5.3-chat-latest              found  aider/resources/model-settings.yml:2736
+openrouter:openai/gpt-5.3-codex                    found  aider/resources/model-settings.yml:3064
+openrouter:openai/gpt-5.3-pro                      found  aider/resources/model-settings.yml:2724
+openrouter:openai/gpt-5.4                          found  aider/resources/model-settings.yml:2743, aider/resources/model-settings.yml:2755
+openrouter:openai/gpt-5.4-chat-latest              found  aider/resources/model-settings.yml:2762
+openrouter:openai/gpt-5.4-pro                      found  aider/resources/model-settings.yml:2750
+openrouter:openai/gpt-5.5                          found  aider/resources/model-settings.yml:2769, aider/resources/model-settings.yml:2781, tests/basic/test_models.py:562, +1 more
+openrouter:openai/gpt-5.5-chat-latest              found  aider/resources/model-settings.yml:2788, tests/basic/test_models.py:563
+openrouter:openai/gpt-5.5-pro                      found  aider/resources/model-settings.yml:2776, tests/basic/test_models.py:582
+openrouter:openai/o1                               found  aider/resources/model-settings.yml:762
+openrouter:openai/o1-mini                          found  aider/resources/model-settings.yml:671
+openrouter:openai/o1-preview                       found  aider/resources/model-settings.yml:695
+openrouter:openai/o1-pro                           found  aider/resources/model-settings.yml:3028
+openrouter:openai/o3                               found  aider/resources/model-settings.yml:1187
+openrouter:openai/o3-mini                          found  aider/resources/model-settings.yml:838
+openrouter:openai/o3-pro                           found  aider/resources/model-settings.yml:1198
+openrouter:openai/o4-mini                          found  aider/resources/model-settings.yml:1000, aider/resources/model-settings.yml:1154, aider/resources/model-settings.yml:1209, +2 more
+xai:grok-3-beta                                    found  aider/models.py:121, aider/resources/model-settings.yml:990
+xai:grok-3-fast-beta                               found  aider/resources/model-settings.yml:1055
+xai:grok-3-mini-beta                               found  aider/resources/model-settings.yml:1045
+xai:grok-3-mini-fast-beta                          found  aider/resources/model-settings.yml:1065
+xai:grok-4                                         found  aider/resources/model-settings.yml:1033
 
 == gpt-researcher https://github.com/assafelovic/gpt-researcher at 3582a68
 528 files read, 53 models found
@@ -250,7 +307,7 @@ openai:text-embedding-3-small                 found  gpt_researcher/config/varia
 openrouter:openai/gpt-4o                      found  evals/hallucination_eval/evaluate.py:21
 
 == browser-use https://github.com/browser-use/browser-use at b49a68e
-445 files read, 184 models found
+445 files read, 215 models found
 anthropic:claude-3-5-haiku-latest                         found  browser_use/llm/tests/test_chat_models.py:104, browser_use/llm/tests/test_chat_models.py:118
 anthropic:claude-3-5-sonnet                               found  tests/ci/test_coordinate_clicking.py:133
 anthropic:claude-3-5-sonnet-20240620                      found  examples/ui/command_line.py:40, examples/ui/streamlit_demo.py:38
@@ -273,6 +330,9 @@ anthropic:claude-sonnet-4-5                               found  tests/ci/test_c
 anthropic:claude-sonnet-4-5-20250101                      found  tests/ci/test_coordinate_clicking.py:118
 anthropic:claude-sonnet-4-6                               found  browser_use/tokens/custom_pricing.py:31, tests/ci/models/test_llm_anthropic.py:11, tests/ci/models/test_llm_browseruse.py:97, +23 more
 anthropic:claude-sonnet-5                                 found  tests/ci/test_anthropic_serialized_tool_input.py:25, tests/ci/test_anthropic_serialized_tool_input.py:34
+bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0         found  browser_use/llm/aws/chat_anthropic.py:42, browser_use/llm/aws/chat_bedrock.py:41, tests/ci/models/test_chat_anthropic_bedrock_empty_content.py:16
+bedrock:anthropic.claude-sonnet-4-6                       found  browser_use/mcp/server.py:670, examples/models/aws.py:27
+bedrock:meta.llama4-maverick-17b-instruct-v1:0            found  examples/models/aws.py:54
 google:gemini-1.5-flash                                   found  examples/custom-functions/parallel_agents.py:246
 google:gemini-1.5-pro                                     found  tests/ci/test_coordinate_clicking.py:138
 google:gemini-2.0                                         found  browser_use/llm/models.py:135
@@ -296,6 +356,19 @@ google:gemma-3-4b                                         found  browser_use/llm
 google:gemma-3n-e2b                                       found  browser_use/llm/google/chat.py:43
 google:gemma-3n-e4b                                       found  browser_use/llm/google/chat.py:44
 google:veo-3.0-generate-001                               found  examples/apps/ad-use/ad_generator.py:238
+groq:llama-3.3-70b-versatile                              found  tests/ci/models/test_llm_groq.py:79, tests/ci/models/test_llm_groq.py:91
+mistral:codestral-latest                                  found  browser_use/llm/models.py:110, browser_use/llm/models.py:198, tests/ci/models/test_llm_model_factory.py:41
+mistral:devstral-2                                        found  browser_use/llm/vercel/chat.py:147
+mistral:devstral-small-2                                  found  browser_use/llm/vercel/chat.py:149
+mistral:ministral-14b                                     found  browser_use/llm/vercel/chat.py:152
+mistral:ministral-3b                                      found  browser_use/llm/vercel/chat.py:153
+mistral:ministral-8b                                      found  browser_use/llm/vercel/chat.py:154
+mistral:mistral-large-3                                   found  browser_use/llm/vercel/chat.py:156
+mistral:mistral-large-latest                              found  browser_use/llm/models.py:107, browser_use/llm/models.py:195, tests/ci/models/test_llm_model_factory.py:38
+mistral:mistral-medium-latest                             found  browser_use/llm/mistral/chat.py:28, browser_use/llm/models.py:108, browser_use/llm/models.py:112, +5 more
+mistral:mistral-small-2506                                found  examples/models/mistral.py:16
+mistral:mistral-small-latest                              found  browser_use/llm/models.py:109, browser_use/llm/models.py:197, tests/ci/models/test_llm_model_factory.py:40
+mistral:pixtral-12b                                       found  browser_use/llm/vercel/chat.py:161
 openai:gpt-3.5-turbo                                      found  tests/ci/models/test_azure_responses_api.py:173
 openai:gpt-4                                              found  tests/ci/models/test_azure_responses_api.py:173
 openai:gpt-4-turbo                                        found  tests/ci/test_coordinate_clicking.py:136
@@ -435,3 +508,18 @@ openrouter:openai/text-embedding-3-large                  found  browser_use/llm
 openrouter:openai/text-embedding-3-small                  found  browser_use/llm/vercel/chat.py:215
 openrouter:openai/text-embedding-ada-002                  found  browser_use/llm/vercel/chat.py:216
 openrouter:qwen/qwen3-32b                                 found  browser_use/llm/groq/chat.py:33
+xai:grok-2                                                found  tests/ci/test_beta_agent.py:4612
+xai:grok-2-vision                                         found  browser_use/llm/vercel/chat.py:240
+xai:grok-3                                                found  browser_use/llm/vercel/chat.py:241, tests/ci/test_beta_agent.py:4574
+xai:grok-3-fast                                           found  browser_use/llm/vercel/chat.py:242
+xai:grok-3-mini                                           found  browser_use/llm/vercel/chat.py:243
+xai:grok-3-mini-fast                                      found  browser_use/llm/vercel/chat.py:244
+xai:grok-4                                                found  browser_use/llm/vercel/chat.py:245
+xai:grok-4-fast-non-reasoning                             found  browser_use/llm/vercel/chat.py:246
+xai:grok-4-fast-reasoning                                 found  browser_use/llm/vercel/chat.py:247
+xai:grok-4.1-fast-non-reasoning                           found  browser_use/llm/vercel/chat.py:248
+xai:grok-4.1-fast-reasoning                               found  browser_use/llm/vercel/chat.py:249
+xai:grok-4.20-multi-agent-beta                            found  browser_use/llm/vercel/chat.py:250
+xai:grok-4.20-non-reasoning-beta                          found  browser_use/llm/vercel/chat.py:251
+xai:grok-4.20-reasoning-beta                              found  browser_use/llm/vercel/chat.py:252
+xai:grok-code-fast-1                                      found  browser_use/llm/vercel/chat.py:253

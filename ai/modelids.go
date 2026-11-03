@@ -22,6 +22,22 @@ var idFamilies = []struct {
 	// Anthropic's IDs have no dots (claude-3-5-sonnet); claude-3.5-sonnet
 	// is how routers such as OpenRouter write it.
 	{Anthropic, regexp.MustCompile(`^claude-[0-9a-z][0-9a-z\-]*$`)},
+	{XAI, regexp.MustCompile(`^grok-[0-9a-z][0-9a-z.\-]*$`)},
+	{Mistral, regexp.MustCompile(`^(mistral|codestral|pixtral|ministral|magistral|devstral|voxtral|open-mistral|open-mixtral)-[0-9a-z][0-9a-z.\-]*$`)},
+	// Groq's own names for the open models it hosts.
+	{Groq, regexp.MustCompile(`^[a-z0-9][a-z0-9.\-]*-(versatile|instant)$`)},
+}
+
+// bedrockID matches Bedrock model IDs (anthropic.claude-sonnet-4-5-...-v1:0),
+// with the region prefix of a cross-region inference profile (us., eu.,
+// global.), which is left out of the ID: the foundation model list names the
+// model without it.
+var bedrockID = regexp.MustCompile(`^(?:(?:us|eu|apac|global|us-gov|jp|au|ca)\.)?((?:anthropic|meta|amazon|cohere|ai21|mistral|stability|deepseek|writer|qwen|openai|twelvelabs|luma)\.[a-z0-9][a-z0-9.\-]*(?::[0-9]+)?)$`)
+
+// routedPrefixes are LiteLLM's provider prefixes (bedrock/..., azure/...)
+// for the providers RadarModel reads; the rest is that provider's ID.
+var routedPrefixes = map[string]string{
+	"bedrock": Bedrock, "azure": Azure, "mistral": Mistral, "groq": Groq, "xai": XAI,
 }
 
 // openRouterVendors are the prefixes of OpenRouter IDs (vendor/model) that
@@ -87,8 +103,13 @@ func RecognizeModel(s string) (Candidate, bool) {
 	// source:model, as in RadarModel's own watch lists and some configs.
 	if pre, rest, ok := strings.Cut(s, ":"); ok && !strings.Contains(pre, "/") {
 		switch pre {
-		case OpenAI, Anthropic, Google:
+		case OpenAI, Anthropic, Google, Mistral, XAI, Bedrock:
 			if c, ok := RecognizeModel(rest); ok && c.Provider == pre {
+				return c, true
+			}
+			return Candidate{}, false
+		case Groq, Azure:
+			if c, ok := routed(pre, rest); ok {
 				return c, true
 			}
 			return Candidate{}, false
@@ -101,6 +122,14 @@ func RecognizeModel(s string) (Candidate, bool) {
 	}
 	if fileName(s) {
 		return Candidate{}, false
+	}
+	if m := bedrockID.FindStringSubmatch(s); m != nil && hasDigit(m[1]) {
+		return Candidate{Provider: Bedrock, ID: m[1]}, true
+	}
+	if pre, rest, ok := strings.Cut(s, "/"); ok {
+		if p, known := routedPrefixes[pre]; known {
+			return routed(p, rest)
+		}
 	}
 	if m := routerID.FindStringSubmatch(s); m != nil {
 		vendorProvider, known := openRouterVendors[m[1]]
@@ -123,7 +152,7 @@ func RecognizeModel(s string) (Candidate, bool) {
 			continue
 		}
 		if f.provider != OpenAI || !strings.HasPrefix(s, "o") {
-			if !hasDigit(s) && s != "aqa" {
+			if !hasDigit(s) && s != "aqa" && !(f.provider == Mistral && strings.HasSuffix(s, "-latest")) {
 				return Candidate{}, false
 			}
 		}
@@ -131,3 +160,26 @@ func RecognizeModel(s string) (Candidate, bool) {
 	}
 	return Candidate{}, false
 }
+
+// routed recognises the ID after a LiteLLM provider prefix. Groq's IDs can
+// carry a vendor (groq/meta-llama/llama-4-scout-...); an Azure deployment
+// counts only when it is named like an OpenAI model.
+func routed(provider, rest string) (Candidate, bool) {
+	switch provider {
+	case Groq:
+		if routedName.MatchString(rest) && hasDigit(rest) {
+			return Candidate{Provider: Groq, ID: rest}, true
+		}
+	case Azure:
+		if c, ok := RecognizeModel(rest); ok && c.Provider == OpenAI {
+			return Candidate{Provider: Azure, ID: c.ID}, true
+		}
+	default:
+		if c, ok := RecognizeModel(rest); ok && c.Provider == provider {
+			return c, true
+		}
+	}
+	return Candidate{}, false
+}
+
+var routedName = regexp.MustCompile(`^[a-z0-9][a-z0-9.\-_]*(/[a-z0-9][a-z0-9.\-_]*)?$`)

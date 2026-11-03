@@ -308,3 +308,33 @@ func TestReview030bScan(t *testing.T) {
 		t.Errorf("files read %d, want %d", res.Files, len(files)+1)
 	}
 }
+
+// Model IDs of the providers added in 0.4, bare and with LiteLLM's prefixes.
+func TestRecognizeMoreProviders(t *testing.T) {
+	yes := map[string]string{
+		"grok-4": "xai:grok-4", "grok-code-fast-1": "xai:grok-code-fast-1", "xai/grok-3-mini": "xai:grok-3-mini",
+		"mistral-large-latest": "mistral:mistral-large-latest", "codestral-2501": "mistral:codestral-2501",
+		"mistral-small-2503": "mistral:mistral-small-2503", "mistral/magistral-medium-2506": "mistral:magistral-medium-2506",
+		"llama-3.3-70b-versatile": "groq:llama-3.3-70b-versatile", "groq/llama-3.1-8b-instant": "groq:llama-3.1-8b-instant",
+		"groq/meta-llama/llama-4-scout-17b-16e-instruct": "groq:meta-llama/llama-4-scout-17b-16e-instruct",
+		"groq/openai/gpt-oss-120b":                       "groq:openai/gpt-oss-120b",
+		"anthropic.claude-sonnet-4-5-20250929-v1:0":      "bedrock:anthropic.claude-sonnet-4-5-20250929-v1:0",
+		"us.anthropic.claude-sonnet-4-5-20250929-v1:0":   "bedrock:anthropic.claude-sonnet-4-5-20250929-v1:0",
+		"bedrock/amazon.nova-pro-v1:0":                   "bedrock:amazon.nova-pro-v1:0",
+		"meta.llama3-3-70b-instruct-v1:0":                "bedrock:meta.llama3-3-70b-instruct-v1:0",
+		"bedrock:anthropic.claude-3-haiku-20240307-v1:0": "bedrock:anthropic.claude-3-haiku-20240307-v1:0",
+		"azure/gpt-4o": "azure:gpt-4o", "azure:gpt-4.1": "azure:gpt-4.1",
+	}
+	for in, want := range yes {
+		c, ok := RecognizeModel(in)
+		if !ok || c.Provider+":"+c.ID != want {
+			t.Errorf("%q: got %v %+v, want %s", in, ok, c, want)
+		}
+	}
+	for _, in := range []string{"grok", "grok-beta", "mistral", "mistral-ai", "mistralai", "azure/my-deployment", "azure/storage-v2",
+		"bedrock/x", "groq/", "anthropic.com", "amazon.com", "meta.json", "us.example", "version-instant", "groq/My Model"} {
+		if c, ok := RecognizeModel(in); ok {
+			t.Errorf("%q taken for a model: %+v", in, c)
+		}
+	}
+}

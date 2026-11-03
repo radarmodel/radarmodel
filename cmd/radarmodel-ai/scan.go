@@ -43,7 +43,10 @@ func cmdScan(args []string, stdout, stderr io.Writer) int {
 	var cfg *ai.Config
 	var w ai.WatchList
 	var store *core.Store
-	providers := []ai.ProviderConfig{{Type: ai.OpenAI}, {Type: ai.Anthropic}, {Type: ai.Google}, {Type: ai.OpenRouter}}
+	var providers []ai.ProviderConfig
+	for _, t := range ai.ProviderTypes() {
+		providers = append(providers, ai.ProviderConfig{Type: t})
+	}
 	haveConfig := true
 	if _, err := os.Stat(*cfgPath); errors.Is(err, os.ErrNotExist) {
 		if _, lerr := os.Lstat(*cfgPath); lerr == nil {
@@ -173,8 +176,14 @@ func writeWatch(path string, cfg *ai.Config, haveConfig bool, res ai.ScanResult,
 			}
 		}
 		var providers []string
-		for _, t := range []string{ai.OpenAI, ai.Anthropic, ai.Google, ai.OpenRouter} {
-			if used[t] {
+		for _, t := range ai.ProviderTypes() {
+			switch {
+			case !used[t]:
+			case t == ai.Azure:
+				// Each Azure resource has its own address; this one is a
+				// placeholder to replace.
+				providers = append(providers, `{"type": "azure", "base_url": "https://YOUR-RESOURCE.openai.azure.com"}`)
+			default:
 				providers = append(providers, fmt.Sprintf(`{"type": %q}`, t))
 			}
 		}

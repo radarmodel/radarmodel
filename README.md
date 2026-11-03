@@ -12,7 +12,8 @@ it saw, and warns you about the models you actually use.
 RadarModel is two products on one engine:
 
 - **RadarModel AI** (`radarmodel-ai`) watches the model lists of OpenAI,
-  Anthropic, Google and OpenRouter.
+  Anthropic, Google, OpenRouter, Mistral, Groq, xAI, Azure OpenAI and Amazon
+  Bedrock.
 - **RadarModel Schema** (`radarmodel-schema`) watches Postgres, MySQL and
   SQLite schemas for drift: tables, columns, indexes, constraints, views and
   triggers changed outside your migrations.
@@ -96,10 +97,14 @@ openrouter:meta-llama/llama-3.3-70b-instruct  new                               
   already gone). `no ... provider configured`: the config has no source of
   that type. Without a config file, every provider counts as configured and
   models show as `found`.
-- It recognises OpenAI, Anthropic and Google model IDs by their shape
-  (`gpt-4o`, `o3-mini`, `claude-sonnet-4-5`, `gemini-2.5-pro`,
-  `models/gemini-2.5-pro`, `text-embedding-3-small`), and `vendor/model`
-  IDs (`openai/gpt-4o`, `anthropic/claude-3.5-sonnet`). A `vendor/model` ID
+- It recognises OpenAI, Anthropic, Google, Mistral and xAI model IDs by
+  their shape (`gpt-4o`, `o3-mini`, `claude-sonnet-4-5`, `gemini-2.5-pro`,
+  `models/gemini-2.5-pro`, `text-embedding-3-small`, `mistral-large-latest`,
+  `grok-4`), Bedrock IDs (`anthropic.claude-sonnet-4-5-20250929-v1:0`; a
+  cross-region profile such as `us.anthropic...` counts as the model it
+  serves), Groq's `-versatile` and `-instant` names, LiteLLM's provider
+  prefixes (`bedrock/`, `azure/`, `mistral/`, `groq/`, `xai/`), and
+  `vendor/model` IDs (`openai/gpt-4o`, `anthropic/claude-3.5-sonnet`). A `vendor/model` ID
   goes to your OpenRouter source when you have one; otherwise to the
   vendor's own source, as LiteLLM and similar libraries use it
   (`gemini/gemini-2.5-pro` always goes to Google).
@@ -137,8 +142,8 @@ doesn't page anyone.
 | Gone from the list on one scan | warning (see below) |
 | Context or output limit went down | breaking |
 | Lifecycle became `retired` (Anthropic) | breaking |
-| Lifecycle left `active`, such as `deprecated` (Anthropic) | warning |
-| Got or changed a retirement date (Anthropic `retires_at`, OpenRouter `expiration_date`) | warning |
+| Lifecycle left `active`, such as `deprecated` (Anthropic), `legacy` (Bedrock) or `inactive` (Groq) | warning |
+| Got or changed a retirement date (Anthropic `retires_at`, OpenRouter `expiration_date`, Mistral `deprecation`, Azure `deprecation.inference`, Bedrock `endOfLifeTime`) | warning |
 | A limit is no longer published | warning |
 | Price went up, or a price appeared or vanished | warning |
 | Lost a supported method (Google) | warning |
@@ -149,6 +154,11 @@ What each provider publishes differs. OpenAI's list has model IDs only, so
 for OpenAI models RadarModel AI can only tell you that a model is gone.
 Anthropic's has limits, lifecycle and retirement dates; Google's has limits
 and supported methods; OpenRouter's has limits, prices and retirement dates.
+Mistral's has context limits and retirement dates; Groq's has limits and
+whether a model is active; xAI's has IDs only. Azure's lists the models a
+resource can deploy, with their retirement dates and stage (preview or
+generally available, reported as info); Bedrock's has each model's
+lifecycle (active or legacy) and end-of-life date.
 
 **Removals are confirmed by a second scan.** The first scan that misses a
 watched model reports a warning and keeps the model in the stored snapshot;
@@ -201,6 +211,11 @@ If a provider really did drop more than half its list, run once with
     {"type": "anthropic"},
     {"type": "google"},
     {"type": "openrouter"},
+    {"type": "mistral"},
+    {"type": "groq"},
+    {"type": "xai"},
+    {"type": "azure", "base_url": "https://my-resource.openai.azure.com"},
+    {"type": "bedrock", "region": "us-east-1"},
     {"type": "openai", "name": "proxy", "base_url": "https://llm-proxy.example.com", "api_key_env": "PROXY_KEY"}
   ],
   "watch": [
@@ -220,12 +235,20 @@ If a provider really did drop more than half its list, run once with
 }
 ```
 
-- **providers.** `type` is `openai`, `anthropic`, `google` or `openrouter`.
-  `name` defaults to the type; give two entries of one type different names.
-  Keys come from `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and `GEMINI_API_KEY`
-  unless `api_key_env` names another variable. OpenRouter's list is public.
+- **providers.** `type` is `openai`, `anthropic`, `google`, `openrouter`,
+  `mistral`, `groq`, `xai`, `azure` or `bedrock`. `name` defaults to the
+  type; give two entries of one type different names. Keys come from
+  `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY`,
+  `GROQ_API_KEY`, `XAI_API_KEY` and `AZURE_OPENAI_API_KEY` unless
+  `api_key_env` names another variable. OpenRouter's list is public.
+  `azure` needs `base_url`, the resource's endpoint; it reads the resource's
+  model list (API version 2024-10-21), not its deployments. `bedrock` reads
+  `ListFoundationModels` in `region` (or `AWS_REGION`), signed with
+  `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN`; the
+  user needs `bedrock:ListFoundationModels`. Profiles and SSO aren't read,
+  so export the keys (`aws configure export-credentials --format env`).
   `base_url` points at a proxy or a compatible endpoint; a `file://` URL reads
-  saved responses from disk (Linux and macOS).
+  saved responses from disk.
 - **watch.** `source:model`. In the model part, `*` matches anything,
   slashes included; a source of `*` matches every provider. Entries naming a
   source that isn't configured are rejected, so a typo can't leave a model

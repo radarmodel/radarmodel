@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/radarmodel/radarmodel/core"
 )
@@ -26,14 +27,36 @@ const (
 	Anthropic  = "anthropic"
 	Google     = "google"
 	OpenRouter = "openrouter"
+	Mistral    = "mistral"
+	Groq       = "groq"
+	XAI        = "xai"
+	Azure      = "azure"
+	Bedrock    = "bedrock"
 )
 
+// defaultBase is each provider's API address. Azure has none (each resource
+// has its own, given as base_url) and Bedrock's depends on the region.
 var defaultBase = map[string]string{
 	OpenAI:     "https://api.openai.com",
 	Anthropic:  "https://api.anthropic.com",
 	Google:     "https://generativelanguage.googleapis.com",
 	OpenRouter: "https://openrouter.ai",
+	Mistral:    "https://api.mistral.ai",
+	Groq:       "https://api.groq.com/openai",
+	XAI:        "https://api.x.ai",
+	Azure:      "",
+	Bedrock:    "",
 }
+
+// providerTypes lists the types in the order messages name them.
+var providerTypes = []string{OpenAI, Anthropic, Google, OpenRouter, Mistral, Groq, XAI, Azure, Bedrock}
+
+// ProviderTypes returns the provider types RadarModel AI reads.
+func ProviderTypes() []string { return append([]string(nil), providerTypes...) }
+
+// azureAPIVersion is the GA version of Azure OpenAI's data-plane API whose
+// Models - List this reads.
+const azureAPIVersion = "2024-10-21"
 
 // defaultKeyEnv is the environment variable read for a provider's key when
 // the config doesn't name one.
@@ -41,6 +64,10 @@ var defaultKeyEnv = map[string]string{
 	OpenAI:    "OPENAI_API_KEY",
 	Anthropic: "ANTHROPIC_API_KEY",
 	Google:    "GEMINI_API_KEY",
+	Mistral:   "MISTRAL_API_KEY",
+	Groq:      "GROQ_API_KEY",
+	XAI:       "XAI_API_KEY",
+	Azure:     "AZURE_OPENAI_API_KEY",
 }
 
 // Attribute names. Limits are token counts; prices are US dollars per token,
@@ -58,6 +85,7 @@ const (
 	AttrMethods       = "methods"
 	AttrExpires       = "expires"
 	AttrLifecycle     = "lifecycle"
+	AttrStage         = "stage"
 	maxPages          = 200
 	anthropicVersion  = "2023-06-01"
 	anthropicPageSize = "1000"
@@ -65,7 +93,8 @@ const (
 
 // ProviderConfig is one model list to watch.
 type ProviderConfig struct {
-	// Type is openai, anthropic, google or openrouter.
+	// Type is openai, anthropic, google, openrouter, mistral, groq, xai,
+	// azure or bedrock.
 	Type string `json:"type"`
 	// Name is the source name used in reports, files and watch entries;
 	// it defaults to Type. Two entries of the same type need different names.
@@ -74,9 +103,25 @@ type ProviderConfig struct {
 	// compatible endpoints. file:// URLs read saved responses from disk.
 	BaseURL string `json:"base_url,omitempty"`
 	// APIKeyEnv names the environment variable holding the key. It defaults
-	// to OPENAI_API_KEY, ANTHROPIC_API_KEY or GEMINI_API_KEY; OpenRouter's
-	// list is public and needs no key.
+	// to the provider's usual variable (OPENAI_API_KEY, GROQ_API_KEY,
+	// AZURE_OPENAI_API_KEY...); OpenRouter's list is public and needs no key.
+	// Bedrock uses AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and
+	// AWS_SESSION_TOKEN instead.
 	APIKeyEnv string `json:"api_key_env,omitempty"`
+	// Region is Bedrock's AWS region; AWS_REGION or AWS_DEFAULT_REGION when
+	// empty.
+	Region string `json:"region,omitempty"`
+}
+
+// region is the Bedrock region to read.
+func (p ProviderConfig) region() string {
+	if p.Region != "" {
+		return p.Region
+	}
+	if r := os.Getenv("AWS_REGION"); r != "" {
+		return r
+	}
+	return os.Getenv("AWS_DEFAULT_REGION")
 }
 
 func (p ProviderConfig) source() string {
@@ -90,6 +135,9 @@ func (p ProviderConfig) base() string {
 	b := p.BaseURL
 	if b == "" {
 		b = defaultBase[p.Type]
+	}
+	if b == "" && p.Type == Bedrock && p.region() != "" {
+		b = "https://bedrock." + p.region() + ".amazonaws.com"
 	}
 	return strings.TrimRight(b, "/")
 }
@@ -116,6 +164,12 @@ func (p ProviderConfig) key() (string, error) {
 // page in the middle of the list, fails the whole scan: a partial list would
 // look like models disappearing.
 func fetchItems(ctx context.Context, f *core.Fetcher, p ProviderConfig) ([]core.Item, error) {
+	if p.Type == Bedrock {
+		return checkEmpty(fetchBedrock(ctx, f, p))
+	}
+	if p.base() == "" {
+		return nil, fmt.Errorf("%s needs a base_url (the resource's endpoint)", p.Type)
+	}
 	key, err := p.key()
 	if err != nil {
 		return nil, err
@@ -130,9 +184,17 @@ func fetchItems(ctx context.Context, f *core.Fetcher, p ProviderConfig) ([]core.
 		items, err = fetchGoogle(ctx, f, p.base(), key)
 	case OpenRouter:
 		items, err = fetchOpenRouter(ctx, f, p.base(), key)
+	case Mistral, Groq, XAI:
+		items, err = fetchCompatible(ctx, f, p.base(), key)
+	case Azure:
+		items, err = fetchAzure(ctx, f, p.base(), key)
 	default:
 		return nil, fmt.Errorf("unknown provider type %q", p.Type)
 	}
+	return checkEmpty(items, err)
+}
+
+func checkEmpty(items []core.Item, err error) ([]core.Item, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +202,150 @@ func fetchItems(ctx context.Context, f *core.Fetcher, p ProviderConfig) ([]core.
 		return nil, fmt.Errorf("the provider returned an empty model list; treated as a failed scan")
 	}
 	return items, nil
+}
+
+// fetchCompatible reads an OpenAI-style /v1/models list with the fields
+// Mistral (max_context_length, deprecation) and Groq (context_window,
+// max_completion_tokens, active) add; xAI adds none.
+func fetchCompatible(ctx context.Context, f *core.Fetcher, base, key string) ([]core.Item, error) {
+	var body struct {
+		Data *[]struct {
+			ID                  string  `json:"id"`
+			OwnedBy             string  `json:"owned_by"`
+			Name                string  `json:"name"`
+			MaxContextLength    num     `json:"max_context_length"`
+			ContextWindow       num     `json:"context_window"`
+			MaxCompletionTokens num     `json:"max_completion_tokens"`
+			Deprecation         *string `json:"deprecation"`
+			Active              *bool   `json:"active"`
+		} `json:"data"`
+	}
+	h := map[string]string{}
+	if key != "" {
+		h["Authorization"] = "Bearer " + key
+	}
+	if err := f.GetJSON(ctx, base+"/v1/models", h, &body); err != nil {
+		return nil, err
+	}
+	if body.Data == nil {
+		return nil, fmt.Errorf("response has no \"data\" list")
+	}
+	var out []core.Item
+	for _, m := range *body.Data {
+		ctxLen := string(m.ContextWindow)
+		if ctxLen == "" {
+			ctxLen = string(m.MaxContextLength)
+		}
+		dep, life := "", ""
+		if m.Deprecation != nil {
+			dep = *m.Deprecation
+		}
+		if m.Active != nil {
+			life = "active"
+			if !*m.Active {
+				life = "inactive"
+			}
+		}
+		out = append(out, item(m.ID,
+			AttrName, m.Name,
+			AttrOwner, m.OwnedBy,
+			AttrContext, ctxLen,
+			AttrMaxOutput, string(m.MaxCompletionTokens),
+			AttrLifecycle, life,
+			AttrExpires, dep))
+	}
+	return out, nil
+}
+
+// fetchAzure reads Azure OpenAI's Models - List: the base models a
+// resource can deploy and its fine-tuned ones, with their retirement dates.
+func fetchAzure(ctx context.Context, f *core.Fetcher, base, key string) ([]core.Item, error) {
+	var body struct {
+		Data *[]struct {
+			ID              string `json:"id"`
+			LifecycleStatus string `json:"lifecycle_status"`
+			Deprecation     struct {
+				Inference num `json:"inference"`
+			} `json:"deprecation"`
+		} `json:"data"`
+	}
+	h := map[string]string{}
+	if key != "" {
+		h["api-key"] = key
+	}
+	if err := f.GetJSON(ctx, base+"/openai/models?api-version="+azureAPIVersion, h, &body); err != nil {
+		return nil, err
+	}
+	if body.Data == nil {
+		return nil, fmt.Errorf("response has no \"data\" list")
+	}
+	var out []core.Item
+	for _, m := range *body.Data {
+		out = append(out, item(m.ID,
+			AttrStage, m.LifecycleStatus,
+			AttrExpires, epochDate(string(m.Deprecation.Inference))))
+	}
+	return out, nil
+}
+
+// epochDate turns Unix seconds into a date; anything else is kept as given.
+func epochDate(s string) string {
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil || n <= 0 {
+		return s
+	}
+	return time.Unix(n, 0).UTC().Format("2006-01-02")
+}
+
+// fetchBedrock reads Bedrock's ListFoundationModels, signed with the AWS
+// credentials in the environment.
+func fetchBedrock(ctx context.Context, f *core.Fetcher, p ProviderConfig) ([]core.Item, error) {
+	if p.region() == "" {
+		return nil, fmt.Errorf("bedrock needs a region: set \"region\" or AWS_REGION")
+	}
+	base := p.base()
+	creds := core.AWSCredentials{
+		AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
+		SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		SessionToken:    os.Getenv("AWS_SESSION_TOKEN"),
+	}
+	u := base + "/foundation-models"
+	h := map[string]string{}
+	if !strings.HasPrefix(base, "file:") {
+		if creds.AccessKeyID == "" || creds.SecretAccessKey == "" {
+			return nil, fmt.Errorf("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are not set")
+		}
+		var err error
+		if h, err = core.SignAWSGet(u, creds, p.region(), "bedrock", time.Now()); err != nil {
+			return nil, err
+		}
+	}
+	var body struct {
+		ModelSummaries *[]struct {
+			ModelID        string `json:"modelId"`
+			ModelName      string `json:"modelName"`
+			ProviderName   string `json:"providerName"`
+			ModelLifecycle struct {
+				Status        string `json:"status"`
+				EndOfLifeTime string `json:"endOfLifeTime"`
+			} `json:"modelLifecycle"`
+		} `json:"modelSummaries"`
+	}
+	if err := f.GetJSON(ctx, u, h, &body); err != nil {
+		return nil, err
+	}
+	if body.ModelSummaries == nil {
+		return nil, fmt.Errorf("response has no \"modelSummaries\" list")
+	}
+	var out []core.Item
+	for _, m := range *body.ModelSummaries {
+		out = append(out, item(m.ModelID,
+			AttrName, m.ModelName,
+			AttrOwner, m.ProviderName,
+			AttrLifecycle, strings.ToLower(m.ModelLifecycle.Status),
+			AttrExpires, m.ModelLifecycle.EndOfLifeTime))
+	}
+	return out, nil
 }
 
 func fetchOpenAI(ctx context.Context, f *core.Fetcher, base, key string) ([]core.Item, error) {

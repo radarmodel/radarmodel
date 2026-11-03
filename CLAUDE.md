@@ -24,7 +24,7 @@ Two products under one roof, on one shared engine, in this one repo:
 
 - `core/`: snapshot, diff, file store, report, alert outputs (webhook, Slack,
   email), HTTP fetcher with retries. Knows nothing about AI or databases.
-- `ai/` + `cmd/radarmodel-ai`: RadarModel AI. OpenAI, Anthropic, Google and
+- `ai/` + `cmd/radarmodel-ai`: RadarModel AI. OpenAI, Anthropic, Google, Mistral, Groq, xAI, Azure, Bedrock (SigV4 in core/sigv4.go) and
   OpenRouter model lists; watch list; severity rules in `ai/classify.go`.
 - `schema/` + `cmd/radarmodel-schema`: RadarModel Schema. Postgres
   (pg_catalog), MySQL and MariaDB (information_schema), SQLite (read-only);

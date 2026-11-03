@@ -211,14 +211,28 @@ func TestKeysGoInHeadersAndNeverIntoErrors(t *testing.T) {
 			got["anthropic"] = req.Header.Get("x-api-key")
 		case strings.HasPrefix(req.Header.Get("Authorization"), "Bearer sk-test-openai"):
 			got["openai"] = req.Header.Get("Authorization")
+		case req.URL.Path == "/mistral/v1/models" && req.Header.Get("Authorization") == "Bearer mistral-test-SECRET":
+			got["mistral"] = "ok"
+		case req.URL.Path == "/groq/v1/models" && req.Header.Get("Authorization") == "Bearer gsk-test-SECRET":
+			got["groq"] = "ok"
+		case req.URL.Path == "/xai/v1/models" && req.Header.Get("Authorization") == "Bearer xai-test-SECRET":
+			got["xai"] = "ok"
+		case req.URL.Path == "/azure/openai/models" && req.Header.Get("api-key") == "azure-test-SECRET" &&
+			req.URL.Query().Get("api-version") == azureAPIVersion:
+			got["azure"] = "ok"
+		case req.URL.Path == "/bedrock/foundation-models" &&
+			strings.HasPrefix(req.Header.Get("Authorization"), "AWS4-HMAC-SHA256 Credential=AKIDTEST/") &&
+			strings.Contains(req.Header.Get("Authorization"), "/us-west-2/bedrock/aws4_request") &&
+			!strings.Contains(req.Header.Get("Authorization"), "SECRET"):
+			got["bedrock"] = "ok"
 		}
 	}
-	if len(got) != 3 {
+	if len(got) != 8 {
 		t.Fatalf("keys sent: %v", got)
 	}
 	// 401 is not retried.
-	if h.fake.calls != 4 {
-		t.Fatalf("%d calls for four providers' 401s", h.fake.calls)
+	if h.fake.calls != 9 {
+		t.Fatalf("%d calls for nine providers' 401s", h.fake.calls)
 	}
 }
 

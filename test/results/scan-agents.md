@@ -14,9 +14,9 @@ and the results were checked by hand, both ways:
 
 | Repo | Commit | Files read | Models found | Lines |
 |---|---|---|---|---|
-| [Aider-AI/aider](https://github.com/Aider-AI/aider) | 5dc9490 | 228 | 189 | 714 |
+| [Aider-AI/aider](https://github.com/Aider-AI/aider) | 5dc9490 | 228 | 246 | 875 |
 | [assafelovic/gpt-researcher](https://github.com/assafelovic/gpt-researcher) | 3582a68 | 528 | 53 | 195 |
-| [browser-use/browser-use](https://github.com/browser-use/browser-use) | b49a68e | 445 | 184 | 423 |
+| [browser-use/browser-use](https://github.com/browser-use/browser-use) | b49a68e | 445 | 215 | 472 |
 
 ## Found
 
@@ -44,6 +44,20 @@ Accepted on purpose: a list of model-name prefixes the code loops over
 (`for pattern in ["gpt-4o", ...]`) is reported, because a list is how code
 names the models it supports, and RadarModel can't tell the loop apart.
 
+## Added in 0.4: Mistral, Groq, xAI, Azure and Bedrock
+
+With the five new providers the scan found 57 more models in aider (36
+Azure, 11 Bedrock, 5 xAI, 4 Groq, 1 Mistral) and 31 in browser-use (15 xAI,
+12 Mistral, 3 Bedrock, 1 Groq); gpt-researcher uses none of them. Each was
+read at its line: aider's model settings (`bedrock/anthropic.claude-...`,
+`groq/llama3-70b-8192`, `xai/grok-3-beta`), browser-use's Bedrock and
+Mistral clients, its tests, and its list of Vercel AI Gateway names
+(`xai/grok-3`, `mistral/devstral-2`), which use the same `vendor/model`
+form and are read as that provider's models. A cross-region inference
+profile (`us.anthropic.claude-sonnet-4-6`) is reported as the model it
+serves, because that's the name Bedrock's model list uses. No new finding
+came from prose or a comment.
+
 ## Missed, and why
 
 None of the words left over is a model the code calls by that name. They
@@ -59,9 +73,9 @@ fall into these groups:
   JSON carry model names as data and as the commands that were run
   (`aider --model gemini/gemini-1.5-flash-002`), not as calls.
 - **URLs.** `https://ai.google.dev/gemini-api/docs/pricing#gemini-2.5-flash`.
-- **Providers RadarModel AI doesn't read yet.** `azure/gpt-4.1` and 35 more
-  Azure names in aider's settings. They come with Azure OpenAI support in
-  the next release.
+- **Providers RadarModel AI didn't read in 0.3.** `azure/gpt-4.1` and 35
+  more Azure names in aider's settings. Since 0.4 they are found, as Azure
+  models (the counts above are 0.4's).
 - **Test placeholders.** `github/o1-mini`, `something/o3-mini`: made-up
   prefixes in aider's tests.
 - **Fragments.** `gpt-4-`, `gpt-oss` (no version), a `replace()` target

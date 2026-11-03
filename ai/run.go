@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -84,7 +85,10 @@ func (c *Config) Validate() (WatchList, error) {
 	keys := map[string]string{}
 	for i, p := range c.Providers {
 		if _, ok := defaultBase[p.Type]; !ok {
-			return WatchList{}, fmt.Errorf("providers[%d]: type %q is not one of openai, anthropic, google, openrouter", i, p.Type)
+			return WatchList{}, fmt.Errorf("providers[%d]: type %q is not one of %s", i, p.Type, strings.Join(providerTypes, ", "))
+		}
+		if p.Type == Azure && p.BaseURL == "" {
+			return WatchList{}, fmt.Errorf("providers[%d]: azure needs base_url, the resource's endpoint (https://NAME.openai.azure.com)", i)
 		}
 		n := p.source()
 		if names[n] {

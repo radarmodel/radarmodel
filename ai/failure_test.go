@@ -41,6 +41,8 @@ func isProvider(r *http.Request, source string) bool {
 		return r.URL.Path == "/v1beta/models"
 	case "openrouter":
 		return r.URL.Path == "/api/v1/models"
+	case "mistral", "groq", "xai", "azure", "bedrock":
+		return strings.HasPrefix(r.URL.Path, "/"+source+"/")
 	}
 	return false
 }
@@ -128,6 +130,37 @@ func TestFailuresAreNeverReportedAsRemovals(t *testing.T) {
 				w.Write([]byte(`{"data":[{"id":"openai/gpt-4o","context_length":{"tokens":128000}}]}`))
 				return true
 			}, want: "not valid JSON"},
+		{name: "mistral: server error", source: "mistral",
+			hook: func(w http.ResponseWriter, r *http.Request) bool {
+				http.Error(w, "upstream down", http.StatusServiceUnavailable)
+				return true
+			}, want: "503"},
+		{name: "groq: error object with status 200", source: "groq",
+			hook: func(w http.ResponseWriter, r *http.Request) bool {
+				w.Write([]byte(`{"error":{"message":"overloaded"}}`))
+				return true
+			}, want: `no "data" list`},
+		{name: "xai: empty list", source: "xai",
+			hook: func(w http.ResponseWriter, r *http.Request) bool {
+				w.Write([]byte(`{"object":"list","data":[]}`))
+				return true
+			}, want: "empty model list"},
+		{name: "azure: maintenance page", source: "azure",
+			hook: func(w http.ResponseWriter, r *http.Request) bool {
+				w.Header().Set("Content-Type", "text/html")
+				w.Write([]byte("<html>Service Unavailable</html>"))
+				return true
+			}, want: "not valid JSON"},
+		{name: "bedrock: access denied", source: "bedrock",
+			hook: func(w http.ResponseWriter, r *http.Request) bool {
+				http.Error(w, `{"message":"User is not authorized to perform: bedrock:ListFoundationModels"}`, http.StatusForbidden)
+				return true
+			}, want: "403"},
+		{name: "bedrock: null list", source: "bedrock",
+			hook: func(w http.ResponseWriter, r *http.Request) bool {
+				w.Write([]byte(`{"modelSummaries":null}`))
+				return true
+			}, want: `no "modelSummaries" list`},
 		{name: "server too slow", source: "google",
 			hook: func(w http.ResponseWriter, r *http.Request) bool {
 				time.Sleep(2500 * time.Millisecond) // the test client gives up at 2s
@@ -137,7 +170,9 @@ func TestFailuresAreNeverReportedAsRemovals(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			h := newHarness(t, "openai:gpt-4o", "anthropic:claude-opus-4-1", "anthropic:claude-sonnet-4-5",
-				"google:gemini-2.5-pro", "openrouter:openai/gpt-4o", "openrouter:anthropic/*")
+				"google:gemini-2.5-pro", "openrouter:openai/gpt-4o", "openrouter:anthropic/*",
+				"mistral:mistral-large-latest", "groq:llama-3.3-70b-versatile", "xai:grok-4", "azure:gpt-4.1",
+				"bedrock:anthropic.claude-sonnet-4-5-20250929-v1:0")
 			if c.setup != nil {
 				c.setup(h)
 			}
