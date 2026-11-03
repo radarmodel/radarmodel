@@ -104,8 +104,9 @@ openrouter:meta-llama/llama-3.3-70b-instruct  new                               
   vendor's own source, as LiteLLM and similar libraries use it
   (`gemini/gemini-2.5-pro` always goes to Google).
 - It reads string literals and config values (`key: value`, `key=value`,
-  YAML lists and keys, `.env` files), never comments, whole-line or after
-  the code. It skips strings a line only tests a name against
+  YAML lists and keys, `.env` files), never comments (whole-line, after the
+  code, or blocks over several lines) or Python docstrings, except a line
+  that is nothing but a model ID. It skips strings a line only tests a name against
   (`name.startswith("gpt-4")`, `"o3" in name`), file names
   (`gpt-4o.png`), values that are URLs, folders such as `node_modules`,
   `vendor`, `.git` and `dist`, lock files and `package.json`, binary files

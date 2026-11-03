@@ -101,30 +101,53 @@ var configExt = map[string]bool{
 	".yaml": true, ".yml": true, ".toml": true, ".ini": true, ".cfg": true, ".conf": true, ".properties": true, ".env": true,
 }
 
-// commentMarks returns what starts a comment in a file of that name, outside
-// a string. JSON has none.
-func commentMarks(name string) []string {
+// syntax is how comments are written in a kind of file: line comments
+// (# or //) and block comments (/* */, docstrings, <!-- -->).
+type syntax struct {
+	line   []string
+	blocks [][2]string
+	yaml   bool // keys can be model names ("gpt-4o:" over a block)
+	shell  bool // unquoted VAR=value assignments
+}
+
+var (
+	cBlocks    = [][2]string{{"/*", "*/"}}
+	slashLang  = syntax{line: []string{"//"}, blocks: cBlocks}
+	hashLang   = syntax{line: []string{"#"}}
+	markupLang = syntax{line: []string{"//"}, blocks: [][2]string{{"/*", "*/"}, {"<!--", "-->"}}}
+)
+
+// syntaxOf returns the comment syntax of a file by its name.
+func syntaxOf(name string) syntax {
 	base := path.Base(name)
 	if base == ".env" || strings.HasPrefix(base, ".env.") || strings.HasSuffix(base, ".env") {
-		return []string{"#"}
+		return syntax{line: []string{"#"}, shell: true}
 	}
 	switch strings.ToLower(path.Ext(base)) {
-	case ".py", ".rb", ".sh", ".bash", ".ex", ".exs", ".yaml", ".yml", ".toml", ".conf", ".cfg", ".env":
-		return []string{"#"}
-	case ".ini", ".properties":
-		return []string{"#", ";"}
+	case ".py":
+		return syntax{line: []string{"#"}, blocks: [][2]string{{`"""`, `"""`}, {"'''", "'''"}}}
+	case ".yaml", ".yml":
+		return syntax{line: []string{"#"}, yaml: true}
+	case ".sh", ".bash":
+		return syntax{line: []string{"#"}, shell: true}
+	case ".rb", ".ex", ".exs", ".toml", ".conf", ".cfg":
+		return hashLang
+	case ".ini":
+		return syntax{line: []string{"#", ";"}}
+	case ".properties":
+		return syntax{line: []string{"#", "!"}}
 	case ".lua":
-		return []string{"--"}
+		return syntax{line: []string{"--"}, blocks: [][2]string{{"--[[", "]]"}}}
 	case ".clj":
-		return []string{";"}
+		return syntax{line: []string{";"}}
 	case ".php":
-		return []string{"//", "/*", "#"}
+		return syntax{line: []string{"//", "#"}, blocks: cBlocks}
 	case ".json":
-		return nil
-	case ".vue", ".svelte":
-		return []string{"//", "/*", "<!--"}
+		return syntax{}
+	case ".vue", ".svelte", ".jsx", ".tsx":
+		return markupLang
 	}
-	return []string{"//", "/*"}
+	return slashLang
 }
 
 // fileKind says how a file is read: "code" (string literals), "config"
@@ -185,6 +208,7 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 			skip = append(skip, a)
 		}
 	}
+	seen := map[string]bool{}
 	for _, root := range roots {
 		info, err := os.Stat(root)
 		if err != nil {
@@ -196,6 +220,9 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 		// WalkDir doesn't follow a root that is a link, so the link is
 		// resolved first; links below the root are still not followed.
 		walkRoot, err := filepath.EvalSymlinks(root)
+		if err == nil {
+			walkRoot, err = filepath.Abs(walkRoot)
+		}
 		if err != nil {
 			return res, err
 		}
@@ -233,11 +260,16 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 				res.Skipped++
 				return nil
 			}
+			// Overlapping folders, or a link and its target, are read once.
+			if seen[p] {
+				return nil
+			}
+			seen[p] = true
 			display := rel
 			if len(roots) > 1 {
 				display = filepath.ToSlash(filepath.Join(root, rel))
 			}
-			read, err := scanFile(p, kind, commentMarks(rel), func(s string, line int) {
+			read, err := scanFile(p, kind, syntaxOf(rel), func(s string, line int) {
 				if c, ok := RecognizeModel(s); ok {
 					add(c, Location{File: display, Line: line})
 				}
@@ -349,7 +381,7 @@ func assign(c Candidate, providers []ProviderConfig) (source, provider, id strin
 // scanFile calls found for every string literal (and, in config files,
 // every unquoted value) on each line that isn't a comment. read is false for
 // a binary file.
-func scanFile(name, kind string, marks []string, found func(s string, line int)) (read bool, err error) {
+func scanFile(name, kind string, syn syntax, found func(s string, line int)) (read bool, err error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return false, err
@@ -369,26 +401,47 @@ func scanFile(name, kind string, marks []string, found func(s string, line int))
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 64<<10), 4<<20)
 	line := 0
+	open := "" // the end of a block comment or docstring still open
 	for sc.Scan() {
 		line++
 		text := sc.Text()
-		trimmed := strings.TrimSpace(text)
-		if commentLine(trimmed, marks) {
+		if open != "" {
+			k := strings.Index(text, open)
+			if k < 0 {
+				// Inside a Python triple-quoted string, a line that is
+				// only a model ID is one entry of a list; prose isn't read.
+				if t := strings.TrimSpace(text); strings.HasPrefix(open, "\"") || strings.HasPrefix(open, "'") {
+					if !strings.ContainsAny(t, " \t\"'`") {
+						found(t, line)
+					}
+				}
+				continue
+			}
+			text = text[k+len(open):]
+			open = ""
+		}
+		var src string
+		src, open = code(text, syn)
+		trimmed := strings.TrimSpace(src)
+		if trimmed == "" {
 			continue
 		}
-		for _, s := range quoted(text, marks) {
+		for _, s := range quoted(src) {
 			found(s, line)
 		}
-		switch kind {
-		case "config":
+		switch {
+		case kind == "config" || (syn.shell && shellAssign.MatchString(trimmed)):
 			if v, ok := configValue(trimmed); ok {
 				found(v, line)
 			}
-			// A YAML key with a block under it: "gpt-4o:".
-			if k, ok := strings.CutSuffix(trimmed, ":"); ok && !strings.ContainsAny(k, " \t:\"'") {
-				found(k, line)
+			// A YAML key with a block under it: "gpt-4o:", "- gpt-4o:".
+			if syn.yaml {
+				k, ok := strings.CutSuffix(strings.TrimPrefix(trimmed, "- "), ":")
+				if ok && !strings.ContainsAny(k, " \t:\"'") {
+					found(k, line)
+				}
 			}
-		case "code":
+		case kind == "code":
 			// A line that is nothing but a model ID: one entry of a list
 			// written as a multi-line string.
 			if !strings.ContainsAny(trimmed, " \t\"'`") {
@@ -402,44 +455,93 @@ func scanFile(name, kind string, marks []string, found func(s string, line int))
 	return true, nil
 }
 
-// commentLine says whether a trimmed line is a whole-line comment: it starts
-// with one of the file's comment marks, or continues a /* */ block (" * ").
-// A line that opens a block comment and closes it again ("/* x */ code") is
-// read.
-func commentLine(t string, marks []string) bool {
-	for _, m := range marks {
-		if !strings.HasPrefix(t, m) {
+var shellAssign = regexp.MustCompile(`^(export\s+)?[A-Za-z_][A-Za-z0-9_]*=`)
+
+// code returns the line with its comments taken out, strings kept. When a
+// block comment (or docstring) opens and doesn't close on the line, open is
+// what closes it.
+func code(line string, syn syntax) (src, open string) {
+	var b strings.Builder
+	for i := 0; i < len(line); {
+		c := line[i]
+		// Docstrings open with a quote, so blocks are looked for first.
+		if blk, ok := blockAt(line, i, syn); ok {
+			k := strings.Index(line[i+len(blk[0]):], blk[1])
+			if k < 0 {
+				return b.String(), blk[1]
+			}
+			b.WriteByte(' ')
+			i += len(blk[0]) + k + len(blk[1])
 			continue
 		}
-		if m == "/*" && strings.Contains(t[2:], "*/") && !strings.HasSuffix(t, "*/") {
-			return false
+		if c == '"' || c == '\'' || c == '`' {
+			if j, ok := stringEnd(line, i); ok {
+				b.WriteString(line[i : j+1])
+				i = j + 1
+				continue
+			}
+			if c != '\'' {
+				b.WriteString(line[i:])
+				return b.String(), ""
+			}
 		}
-		return true
-	}
-	for _, m := range marks {
-		if m == "/*" && (t == "*" || strings.HasPrefix(t, "* ") || t == "*/") {
-			return true
+		if lineCommentAt(line, i, syn.line) {
+			return b.String(), ""
 		}
+		b.WriteByte(c)
+		i++
 	}
-	return false
+	return b.String(), ""
 }
 
-// commentAt says whether a comment starts at line[i], outside a string.
-func commentAt(line string, i int, marks []string) bool {
+func blockAt(line string, i int, syn syntax) ([2]string, bool) {
+	for _, blk := range syn.blocks {
+		if strings.HasPrefix(line[i:], blk[0]) {
+			return blk, true
+		}
+	}
+	return [2]string{}, false
+}
+
+// stringEnd returns the index of the quote closing the string that starts
+// at line[i]. An apostrophe inside a word (don't) or one with no closing
+// quote on the line (Rust's &'static) doesn't start a string.
+func stringEnd(line string, i int) (int, bool) {
+	q := line[i]
+	if q == '\'' && i > 0 && isWordByte(line[i-1]) {
+		return 0, false
+	}
+	for j := i + 1; j < len(line); j++ {
+		switch line[j] {
+		case '\\':
+			j++
+		case q:
+			return j, true
+		}
+	}
+	return 0, false
+}
+
+// lineCommentAt says whether a line comment starts at line[i], outside a
+// string.
+func lineCommentAt(line string, i int, marks []string) bool {
 	for _, m := range marks {
 		if !strings.HasPrefix(line[i:], m) {
 			continue
 		}
 		switch m {
-		case "/*":
-			// An inline block comment ends on the line; only an open one
-			// hides the rest.
-			if strings.Contains(line[i+2:], "*/") {
+		case "//":
+			// A URL outside quotes (https://...) in markup text.
+			if i > 0 && line[i-1] == ':' {
 				return false
 			}
-		case "#", ";":
-			// "#" right after a word or symbol (a#b, C#) isn't a comment.
+		case "#", ";", "!":
+			// "#" right after a word or symbol (a#b, C#, $#) isn't a
+			// comment, nor is an attribute (#[...]).
 			if i > 0 && line[i-1] != ' ' && line[i-1] != '\t' {
+				return false
+			}
+			if m == "#" && strings.HasPrefix(line[i:], "#[") {
 				return false
 			}
 		}
@@ -448,33 +550,22 @@ func commentAt(line string, i int, marks []string) bool {
 	return false
 }
 
-// quoted returns the contents of the quoted strings on a line: "...",
-// '...' and `...`, with backslash escapes skipped. A quote left open runs to
-// the end of the line and is dropped.
-func quoted(line string, marks []string) []string {
+// quoted returns the contents of the quoted strings on a line whose comments
+// are already out: "...", '...' and `...`, with backslash escapes skipped.
+func quoted(line string) []string {
 	var out []string
 	prefixCheck := false
 	last := 0
 	for i := 0; i < len(line); i++ {
-		if commentAt(line, i, marks) {
-			return out
-		}
 		q := line[i]
 		if q != '"' && q != '\'' && q != '`' {
 			continue
 		}
-		// An apostrophe inside a word (don't) doesn't start a string.
-		if q == '\'' && i > 0 && isWordByte(line[i-1]) {
-			continue
-		}
-		j := i + 1
-		for j < len(line) && line[j] != q {
-			if line[j] == '\\' {
-				j++
+		j, ok := stringEnd(line, i)
+		if !ok {
+			if q == '\'' {
+				continue
 			}
-			j++
-		}
-		if j >= len(line) {
 			return out
 		}
 		// Strings tested as prefixes or substrings of a model name

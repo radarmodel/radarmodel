@@ -99,6 +99,9 @@ func RecognizeModel(s string) (Candidate, bool) {
 			return Candidate{}, false
 		}
 	}
+	if fileName(s) {
+		return Candidate{}, false
+	}
 	if m := routerID.FindStringSubmatch(s); m != nil {
 		vendorProvider, known := openRouterVendors[m[1]]
 		if !known || !(hasDigit(m[2]) || strings.HasSuffix(m[2], ":free")) {
@@ -114,9 +117,6 @@ func RecognizeModel(s string) (Candidate, bool) {
 			}
 		}
 		return c, true
-	}
-	if fileName(s) {
-		return Candidate{}, false
 	}
 	for _, f := range idFamilies {
 		if !f.re.MatchString(s) {

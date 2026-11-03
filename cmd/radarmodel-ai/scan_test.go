@@ -214,3 +214,16 @@ func TestScanWriteThroughLinkedConfig(t *testing.T) {
 		t.Fatalf("shared config not updated:\n%s", b)
 	}
 }
+
+// A config link to a missing file is an error, not "no config".
+func TestScanDanglingConfigLink(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "radarmodel.json")
+	if err := os.Symlink(filepath.Join(dir, "gone.json"), cfg); err != nil {
+		t.Skip("no symlinks here")
+	}
+	var out, errOut bytes.Buffer
+	if c := run([]string{"scan", "-config", cfg, "-write", dir}, &out, &errOut); c != core.ExitError || !strings.Contains(errOut.String(), "doesn't exist") {
+		t.Fatalf("exit %d: %s", c, errOut.String())
+	}
+}

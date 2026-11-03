@@ -246,7 +246,7 @@ openai:o3-mini-2025-01-31                     found  gpt_researcher/llm_provider
 openai:o4-mini                                found  gpt_researcher/llm_provider/generic/base.py:54, gpt_researcher/llm_provider/generic/base.py:82, gpt_researcher/utils/costs.py:46
 openai:o4-mini-2025-04-16                     found  gpt_researcher/llm_provider/generic/base.py:55, gpt_researcher/llm_provider/generic/base.py:83
 openai:text-embedding-3-large                 found  gpt_researcher/config/config.py:108, gpt_researcher/config/config.py:110
-openai:text-embedding-3-small                 found  gpt_researcher/config/variables/default.py:5, gpt_researcher/memory/embeddings.py:29, gpt_researcher/memory/embeddings.py:69, +2 more
+openai:text-embedding-3-small                 found  gpt_researcher/config/variables/default.py:5, gpt_researcher/memory/embeddings.py:29, tests/test-your-embeddings.py:28, +1 more
 openrouter:openai/gpt-4o                      found  evals/hallucination_eval/evaluate.py:21
 
 == browser-use https://github.com/browser-use/browser-use at b49a68e
@@ -277,7 +277,7 @@ google:gemini-1.5-flash                                   found  examples/custom
 google:gemini-1.5-pro                                     found  tests/ci/test_coordinate_clicking.py:138
 google:gemini-2.0                                         found  browser_use/llm/models.py:135
 google:gemini-2.0-flash                                   found  browser_use/llm/google/chat.py:27, browser_use/llm/tests/test_chat_models.py:134, browser_use/llm/tests/test_chat_models.py:148, +10 more
-google:gemini-2.0-flash-exp                               found  browser_use/llm/google/chat.py:28, browser_use/llm/google/chat.py:78, browser_use/llm/tests/test_gemini_image.py:55, +11 more
+google:gemini-2.0-flash-exp                               found  browser_use/llm/google/chat.py:28, browser_use/llm/tests/test_gemini_image.py:55, browser_use/llm/tests/test_single_step.py:134, +10 more
 google:gemini-2.0-flash-lite-preview-02-05                found  browser_use/llm/google/chat.py:29
 google:gemini-2.5                                         found  browser_use/llm/models.py:137
 google:gemini-2.5-flash                                   found  browser_use/llm/google/chat.py:31, examples/features/download_file.py:18, tests/ci/models/test_llm_google.py:99
@@ -300,7 +300,7 @@ openai:gpt-3.5-turbo                                      found  tests/ci/models
 openai:gpt-4                                              found  tests/ci/models/test_azure_responses_api.py:173
 openai:gpt-4-turbo                                        found  tests/ci/test_coordinate_clicking.py:136
 openai:gpt-4.1                                            found  .github/ISSUE_TEMPLATE/1_element_detection_bug.yml:100, browser_use/llm/tests/test_single_step.py:202, browser_use/tokens/tests/test_cost.py:58, +10 more
-openai:gpt-4.1-mini                                       found  .github/ISSUE_TEMPLATE/2_bug_report.yml:50, browser_use/actor/playground/flights.py:5, browser_use/actor/playground/mixed_automation.py:22, +48 more
+openai:gpt-4.1-mini                                       found  .github/ISSUE_TEMPLATE/2_bug_report.yml:50, browser_use/actor/playground/flights.py:5, browser_use/actor/playground/mixed_automation.py:22, +47 more
 openai:gpt-4o                                             found  browser_use/llm/models.py:133, browser_use/mcp/manifest.json:156, browser_use/mcp/server.py:686, +12 more
 openai:gpt-4o-mini                                        found  browser_use/llm/models.py:131, browser_use/llm/tests/test_chat_models.py:73, browser_use/llm/tests/test_chat_models.py:88, +4 more
 openai:gpt-5                                              found  browser_use/llm/openai/chat.py:73, examples/ui/gradio_demo.py:93, tests/ci/models/test_llm_browseruse.py:97
@@ -309,13 +309,13 @@ openai:gpt-5-mini                                         found  browser_use/llm
 openai:gpt-5-nano                                         found  browser_use/llm/openai/chat.py:75
 openai:gpt-5.1-codex                                      found  browser_use/llm/azure/chat.py:25, tests/ci/models/test_azure_responses_api.py:195
 openai:gpt-5.1-codex-max                                  found  browser_use/llm/azure/chat.py:27, tests/ci/models/test_azure_responses_api.py:197
-openai:gpt-5.1-codex-mini                                 found  browser_use/llm/azure/chat.py:26, examples/models/azure_openai.py:8, examples/models/azure_openai.py:34, +2 more
+openai:gpt-5.1-codex-mini                                 found  browser_use/llm/azure/chat.py:26, examples/models/azure_openai.py:34, tests/ci/models/test_azure_responses_api.py:153, +1 more
 openai:gpt-5.2-pro                                        found  browser_use/llm/vercel/chat.py:321
 openai:gpt-5.3-codex-spark                                found  browser_use/beta/service.py:689
 openai:gpt-5.4-pro                                        found  browser_use/llm/vercel/chat.py:322
 openai:gpt-o4-mini                                        found  browser_use/mcp/server.py:639
 openai:gpt-oss-120b                                       found  browser_use/llm/cerebras/chat.py:33, browser_use/llm/models.py:147
-openai:o1                                                 found  browser_use/llm/openai/chat.py:70, browser_use/llm/vercel/chat.py:292, browser_use/llm/vercel/chat.py:317
+openai:o1                                                 found  browser_use/llm/openai/chat.py:70, browser_use/llm/vercel/chat.py:317
 openai:o1-pro                                             found  browser_use/llm/openai/chat.py:71
 openai:o3                                                 found  browser_use/llm/openai/chat.py:68, browser_use/llm/vercel/chat.py:318, examples/ui/gradio_demo.py:93, +6 more
 openai:o3-mini                                            found  browser_use/llm/openai/chat.py:69, tests/ci/models/test_llm_openai.py:18, tests/ci/models/test_llm_openai.py:19, +1 more
@@ -336,7 +336,7 @@ openrouter:anthropic/claude-opus-4.1                      found  browser_use/llm
 openrouter:anthropic/claude-opus-4.5                      found  browser_use/llm/vercel/chat.py:68
 openrouter:anthropic/claude-opus-4.6                      found  browser_use/llm/vercel/chat.py:69, browser_use/tokens/custom_pricing.py:61
 openrouter:anthropic/claude-sonnet-4                      found  browser_use/llm/vercel/chat.py:70
-openrouter:anthropic/claude-sonnet-4-6                    found  browser_use/llm/browser_use/chat.py:68, examples/models/browser_use_provider_models.py:7, examples/models/browser_use_provider_models.py:34, +4 more
+openrouter:anthropic/claude-sonnet-4-6                    found  examples/models/browser_use_provider_models.py:34, tests/ci/models/test_llm_browseruse.py:82, tests/ci/models/test_llm_browseruse.py:109, +2 more
 openrouter:anthropic/claude-sonnet-4.5                    found  browser_use/llm/vercel/chat.py:71, examples/models/vercel_ai_gateway.py:36, examples/models/vercel_ai_gateway.py:47
 openrouter:anthropic/claude-sonnet-4.6                    found  browser_use/llm/vercel/chat.py:72, browser_use/tokens/custom_pricing.py:41
 openrouter:cohere/embed-v4.0                              found  browser_use/llm/vercel/chat.py:88
@@ -357,7 +357,7 @@ openrouter:google/gemini-2.5-flash-lite-preview-09-2025   found  browser_use/llm
 openrouter:google/gemini-2.5-flash-preview-09-2025        found  browser_use/llm/vercel/chat.py:101
 openrouter:google/gemini-2.5-pro                          found  browser_use/llm/vercel/chat.py:102
 openrouter:google/gemini-3-flash                          found  browser_use/llm/vercel/chat.py:103
-openrouter:google/gemini-3-pro                            found  browser_use/llm/browser_use/chat.py:69, examples/models/browser_use_provider_models.py:9, tests/ci/models/test_llm_browseruse.py:84
+openrouter:google/gemini-3-pro                            found  tests/ci/models/test_llm_browseruse.py:84
 openrouter:google/gemini-3-pro-image                      found  browser_use/llm/vercel/chat.py:104
 openrouter:google/gemini-3-pro-preview                    found  browser_use/llm/vercel/chat.py:105
 openrouter:google/gemini-3.1-flash-image-preview          found  browser_use/llm/vercel/chat.py:106
@@ -396,7 +396,7 @@ openrouter:openai/gpt-4-turbo                             found  browser_use/llm
 openrouter:openai/gpt-4.1                                 found  browser_use/llm/vercel/chat.py:177
 openrouter:openai/gpt-4.1-mini                            found  browser_use/llm/vercel/chat.py:178
 openrouter:openai/gpt-4.1-nano                            found  browser_use/llm/vercel/chat.py:179
-openrouter:openai/gpt-4o                                  found  browser_use/llm/vercel/chat.py:180, browser_use/llm/vercel/chat.py:280, examples/models/vercel_ai_gateway.py:29, +10 more
+openrouter:openai/gpt-4o                                  found  browser_use/llm/vercel/chat.py:180, examples/models/vercel_ai_gateway.py:29, tests/ci/models/test_llm_openrouter.py:32, +9 more
 openrouter:openai/gpt-4o-mini                             found  browser_use/llm/tests/test_chat_models.py:64, browser_use/llm/tests/test_chat_models.py:237, browser_use/llm/tests/test_chat_models.py:251, +6 more
 openrouter:openai/gpt-4o-mini-search-preview              found  browser_use/llm/vercel/chat.py:182
 openrouter:openai/gpt-5                                   found  browser_use/llm/vercel/chat.py:183
@@ -418,7 +418,7 @@ openrouter:openai/gpt-5.3-chat                            found  browser_use/llm
 openrouter:openai/gpt-5.3-codex                           found  browser_use/llm/vercel/chat.py:199
 openrouter:openai/gpt-5.4                                 found  browser_use/llm/vercel/chat.py:200
 openrouter:openai/gpt-5.4-pro                             found  browser_use/llm/vercel/chat.py:201
-openrouter:openai/gpt-5.5                                 found  browser_use/llm/browser_use/chat.py:41, browser_use/llm/browser_use/chat.py:69, examples/beta_agent/basic.py:25, +3 more
+openrouter:openai/gpt-5.5                                 found  examples/beta_agent/basic.py:25, tests/ci/models/test_llm_browseruse.py:83, tests/ci/models/test_llm_browseruse.py:137
 openrouter:openai/gpt-image-1                             found  browser_use/llm/vercel/chat.py:202
 openrouter:openai/gpt-image-1-mini                        found  browser_use/llm/vercel/chat.py:203
 openrouter:openai/gpt-image-1.5                           found  browser_use/llm/vercel/chat.py:204

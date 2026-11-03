@@ -15,8 +15,8 @@ and the results were checked by hand, both ways:
 | Repo | Commit | Files read | Models found | Lines |
 |---|---|---|---|---|
 | [Aider-AI/aider](https://github.com/Aider-AI/aider) | 5dc9490 | 228 | 189 | 714 |
-| [assafelovic/gpt-researcher](https://github.com/assafelovic/gpt-researcher) | 3582a68 | 528 | 53 | 196 |
-| [browser-use/browser-use](https://github.com/browser-use/browser-use) | b49a68e | 445 | 184 | 435 |
+| [assafelovic/gpt-researcher](https://github.com/assafelovic/gpt-researcher) | 3582a68 | 528 | 53 | 195 |
+| [browser-use/browser-use](https://github.com/browser-use/browser-use) | b49a68e | 445 | 184 | 423 |
 
 ## Found
 
@@ -34,7 +34,11 @@ file names, `package.json`, bare `o2` and `o4` to `o9` (only `o1` and `o3`
 exist on their own), and a config value read twice. On these repos that
 dropped browser-use's `'o4'` (an entry in a list of reasoning-model
 prefixes) and gpt-researcher's five `package.json` files, which held no
-model, and removed doubled locations.
+model, and removed doubled locations. A second review added block comments
+and Python docstrings spanning lines: the usage examples in docstrings
+(`ChatVercel(model='openai/gpt-4o')` in a class's description) are prose
+now, which removed 13 locations of models the same repos also call in code.
+No model dropped out.
 
 Accepted on purpose: a list of model-name prefixes the code loops over
 (`for pattern in ["gpt-4o", ...]`) is reported, because a list is how code
@@ -49,7 +53,7 @@ fall into these groups:
   `model.startswith("gpt-4.1")`, `'o3' in model_name`: the code checks a
   name, it doesn't call one. The scan skips the string before `in`, and
   `startswith`, `includes`, `contains` and the like.
-- **Prose.** Docstrings, print and log messages, error texts ("pass a model
+- **Prose.** Docstrings and their usage examples, print and log messages, error texts ("pass a model
   such as 'openai/gpt-5.5'"), issue templates' descriptions, benchmark write-ups.
 - **Recorded results.** aider's leaderboards and gpt-researcher's benchmark
   JSON carry model names as data and as the commands that were run

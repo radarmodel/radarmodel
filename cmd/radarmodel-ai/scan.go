@@ -46,6 +46,10 @@ func cmdScan(args []string, stdout, stderr io.Writer) int {
 	providers := []ai.ProviderConfig{{Type: ai.OpenAI}, {Type: ai.Anthropic}, {Type: ai.Google}, {Type: ai.OpenRouter}}
 	haveConfig := true
 	if _, err := os.Stat(*cfgPath); errors.Is(err, os.ErrNotExist) {
+		if _, lerr := os.Lstat(*cfgPath); lerr == nil {
+			fmt.Fprintf(stderr, "%s is a link to a file that doesn't exist\n", *cfgPath)
+			return core.ExitError
+		}
 		haveConfig = false
 	} else {
 		c, watch, st, err := load(*cfgPath)

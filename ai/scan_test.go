@@ -50,7 +50,7 @@ func TestRecognizeModel(t *testing.T) {
 }
 
 func TestQuotedAndConfigValues(t *testing.T) {
-	got := quoted(`model = "gpt-4o"; alt = 'claude-sonnet-4-5' `+"`gemini-2.5-flash`"+` don't 'x\'y'`, nil)
+	got := quoted(`model = "gpt-4o"; alt = 'claude-sonnet-4-5' ` + "`gemini-2.5-flash`" + ` don't 'x\'y'`)
 	want := []string{"gpt-4o", "claude-sonnet-4-5", "gemini-2.5-flash", `x\'y`}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Errorf("quoted: %q", got)
@@ -258,5 +258,53 @@ func TestReview030Scan(t *testing.T) {
 	}
 	if l := got["gemini-2.0-flash"]; len(l) != 1 {
 		t.Errorf("gemini-2.0-flash locations %v, want one", l)
+	}
+}
+
+// Cases from the second 0.3.0 review.
+func TestReview030bScan(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"c.vue":        "<p>Docs at https://example.com/models</p> <Chat model=\"gpt-4o-mini-2024-07-18\" />\n<!-- note --> <Chat model=\"gpt-4.1-2025-04-14\"/>\n",
+		"a.js":         "const a = \"gpt-4.1\" /* trailing \"gpt-4-0613\" */\n/*\n old default was \"gpt-3.5-turbo-0301\"\n*/\nconst f = \"openai/gpt-4o.json\"\n",
+		"b.py":         "def f():\n    \"\"\"Uses \"gpt-4-32k\" by default.\n    more prose\n    \"\"\"\n    return \"o3-mini\"\nMODELS = \"\"\"\ngpt-4.1-nano\n\"\"\"\n",
+		"h.yaml":       "gpt-4.5-preview:  # pricing\n  x: 1\nlist:\n  - gemini-1.5-flash-8b:\n      y: 2\n",
+		"l.toml":       "[models]\ngemma-3-27b-it:\n",
+		"m.ini":        "model = o4-mini ; fallback\n",
+		"p.properties": "! \"gpt-4-0314\"\nmodel=gpt-4o\n",
+		"f.rs":         "const MODEL: &'static str = \"claude-3-opus-20240229\";\n",
+		"g.php":        "<?php\n#[Model(\"gpt-4o-transcribe\")]\n",
+		"s.sh":         "export MODEL=gpt-4o-audio-preview\n",
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	os.MkdirAll(filepath.Join(dir, "sub"), 0o755)
+	os.WriteFile(filepath.Join(dir, "sub", "z.py"), []byte("m = \"gpt-4o\"\n"), 0o644)
+	res, err := Scan([]string{dir, filepath.Join(dir, "sub")}, []ProviderConfig{{Type: OpenAI}, {Type: Anthropic}, {Type: Google}}, WatchList{}, nil, ScanOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string][]Location{}
+	for _, f := range res.Found {
+		got[f.ID] = f.Locations
+	}
+	for _, want := range []string{"gpt-4o-mini-2024-07-18", "gpt-4.1-2025-04-14", "gpt-4.1", "o3-mini", "gpt-4.1-nano", "gpt-4.5-preview", "gemini-1.5-flash-8b", "o4-mini", "gpt-4o", "claude-3-opus-20240229", "gpt-4o-transcribe", "gpt-4o-audio-preview"} {
+		if _, ok := got[want]; !ok {
+			t.Errorf("missed %s", want)
+		}
+	}
+	for _, bad := range []string{"gpt-4-0613", "gpt-3.5-turbo-0301", "gpt-4o.json", "openai/gpt-4o.json", "gpt-4-32k", "gemma-3-27b-it", "gpt-4-0314"} {
+		if _, ok := got[bad]; ok {
+			t.Errorf("reported %s", bad)
+		}
+	}
+	if l := got["gpt-4o"]; len(l) != 2 { // p.properties and sub/z.py, once
+		t.Errorf("gpt-4o locations %v, want 2", l)
+	}
+	if res.Files != len(files)+1 {
+		t.Errorf("files read %d, want %d", res.Files, len(files)+1)
 	}
 }
