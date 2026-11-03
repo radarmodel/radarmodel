@@ -104,11 +104,13 @@ openrouter:meta-llama/llama-3.3-70b-instruct  new                               
   vendor's own source, as LiteLLM and similar libraries use it
   (`gemini/gemini-2.5-pro` always goes to Google).
 - It reads string literals and config values (`key: value`, `key=value`,
-  YAML lists, `.env` files), never comments. It skips strings a line only
-  tests a name against (`name.startswith("gpt-4")`, `"o3" in name`), values
-  that are URLs, folders such as `node_modules`, `vendor`, `.git` and
-  `dist`, lock files, binary files and files over 2 MiB, and it doesn't follow
-  symbolic links. `-exclude PATTERN` (repeatable) leaves out more paths.
+  YAML lists and keys, `.env` files), never comments, whole-line or after
+  the code. It skips strings a line only tests a name against
+  (`name.startswith("gpt-4")`, `"o3" in name`), file names
+  (`gpt-4o.png`), values that are URLs, folders such as `node_modules`,
+  `vendor`, `.git` and `dist`, lock files and `package.json`, binary files
+  and files over 2 MiB, and it doesn't follow symbolic links below the
+  folders it was given. `-exclude PATTERN` (repeatable) leaves out more paths.
 - RadarModel's own config file and state folder are left out: their watch
   list and snapshots name models the code may not use.
 

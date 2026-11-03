@@ -189,6 +189,11 @@ func writeWatch(path string, cfg *ai.Config, haveConfig bool, res ai.ScanResult,
 		}
 		return f.Close()
 	}
+	// A config that is a link is rewritten where it points, so the link
+	// stays and the file it names gets the new list.
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		path = real
+	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return err

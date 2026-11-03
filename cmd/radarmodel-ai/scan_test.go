@@ -187,3 +187,30 @@ func TestScanCheckWriteStillFailsWithoutSource(t *testing.T) {
 		t.Fatalf("exit %d, want 0: %s", code, out.String())
 	}
 }
+
+// -write through a config that is a link updates the file it points to and
+// keeps the link (0.3.0 review).
+func TestScanWriteThroughLinkedConfig(t *testing.T) {
+	dir := t.TempDir()
+	shared := filepath.Join(dir, "shared.json")
+	if err := os.WriteFile(shared, []byte(`{"providers":[{"type":"openai"}],"watch":["openai:gpt-4o"]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := filepath.Join(dir, "radarmodel.json")
+	if err := os.Symlink(shared, cfg); err != nil {
+		t.Skip("no symlinks here")
+	}
+	code := filepath.Join(dir, "code")
+	os.MkdirAll(code, 0o755)
+	os.WriteFile(filepath.Join(code, "a.py"), []byte("m = \"gpt-4.1\"\n"), 0o644)
+	var out, errOut bytes.Buffer
+	if c := run([]string{"scan", "-config", cfg, "-write", code}, &out, &errOut); c != 0 {
+		t.Fatalf("exit %d: %s", c, errOut.String())
+	}
+	if fi, err := os.Lstat(cfg); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("the link was replaced by a file")
+	}
+	if b, _ := os.ReadFile(shared); !strings.Contains(string(b), "openai:gpt-4.1") {
+		t.Fatalf("shared config not updated:\n%s", b)
+	}
+}

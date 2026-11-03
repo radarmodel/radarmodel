@@ -101,11 +101,37 @@ var configExt = map[string]bool{
 	".yaml": true, ".yml": true, ".toml": true, ".ini": true, ".cfg": true, ".conf": true, ".properties": true, ".env": true,
 }
 
+// commentMarks returns what starts a comment in a file of that name, outside
+// a string. JSON has none.
+func commentMarks(name string) []string {
+	base := path.Base(name)
+	if base == ".env" || strings.HasPrefix(base, ".env.") || strings.HasSuffix(base, ".env") {
+		return []string{"#"}
+	}
+	switch strings.ToLower(path.Ext(base)) {
+	case ".py", ".rb", ".sh", ".bash", ".ex", ".exs", ".yaml", ".yml", ".toml", ".conf", ".cfg", ".env":
+		return []string{"#"}
+	case ".ini", ".properties":
+		return []string{"#", ";"}
+	case ".lua":
+		return []string{"--"}
+	case ".clj":
+		return []string{";"}
+	case ".php":
+		return []string{"//", "/*", "#"}
+	case ".json":
+		return nil
+	case ".vue", ".svelte":
+		return []string{"//", "/*", "<!--"}
+	}
+	return []string{"//", "/*"}
+}
+
 // fileKind says how a file is read: "code" (string literals), "config"
 // (string literals and key: value / key=value values), or "" (not read).
 func fileKind(name string) string {
 	base := path.Base(name)
-	if lockFiles[base] {
+	if lockFiles[base] || base == "package.json" || base == "composer.json" {
 		return ""
 	}
 	if base == ".env" || strings.HasPrefix(base, ".env.") || strings.HasSuffix(base, ".env") {
@@ -145,10 +171,16 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 			f = &Found{Source: source, Provider: provider, ID: id}
 			found[key] = f
 		}
+		if n := len(f.Locations); n > 0 && f.Locations[n-1] == loc {
+			return
+		}
 		f.Locations = append(f.Locations, loc)
 	}
 	var skip []string
 	for _, p := range opt.SkipPaths {
+		if r, err := filepath.EvalSymlinks(p); err == nil {
+			p = r
+		}
 		if a, err := filepath.Abs(p); err == nil {
 			skip = append(skip, a)
 		}
@@ -161,11 +193,17 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 		if !info.IsDir() {
 			return res, fmt.Errorf("%s is not a folder", root)
 		}
-		err = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		// WalkDir doesn't follow a root that is a link, so the link is
+		// resolved first; links below the root are still not followed.
+		walkRoot, err := filepath.EvalSymlinks(root)
+		if err != nil {
+			return res, err
+		}
+		err = filepath.WalkDir(walkRoot, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
-			rel, _ := filepath.Rel(root, p)
+			rel, _ := filepath.Rel(walkRoot, p)
 			rel = filepath.ToSlash(rel)
 			if excluded(rel, opt.Exclude) || skipped(p, skip) {
 				if d.IsDir() {
@@ -175,7 +213,7 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 			}
 			if d.IsDir() {
 				name := d.Name()
-				if p != root && (skipDirs[name] || (strings.HasPrefix(name, ".") && name != ".github")) {
+				if p != walkRoot && (skipDirs[name] || (strings.HasPrefix(name, ".") && name != ".github")) {
 					return filepath.SkipDir
 				}
 				return nil
@@ -199,7 +237,7 @@ func Scan(roots []string, providers []ProviderConfig, w WatchList, store *core.S
 			if len(roots) > 1 {
 				display = filepath.ToSlash(filepath.Join(root, rel))
 			}
-			read, err := scanFile(p, kind, func(s string, line int) {
+			read, err := scanFile(p, kind, commentMarks(rel), func(s string, line int) {
 				if c, ok := RecognizeModel(s); ok {
 					add(c, Location{File: display, Line: line})
 				}
@@ -311,7 +349,7 @@ func assign(c Candidate, providers []ProviderConfig) (source, provider, id strin
 // scanFile calls found for every string literal (and, in config files,
 // every unquoted value) on each line that isn't a comment. read is false for
 // a binary file.
-func scanFile(name, kind string, found func(s string, line int)) (read bool, err error) {
+func scanFile(name, kind string, marks []string, found func(s string, line int)) (read bool, err error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return false, err
@@ -335,16 +373,20 @@ func scanFile(name, kind string, found func(s string, line int)) (read bool, err
 		line++
 		text := sc.Text()
 		trimmed := strings.TrimSpace(text)
-		if commentLine(trimmed, kind) {
+		if commentLine(trimmed, marks) {
 			continue
 		}
-		for _, s := range quoted(text) {
+		for _, s := range quoted(text, marks) {
 			found(s, line)
 		}
 		switch kind {
 		case "config":
 			if v, ok := configValue(trimmed); ok {
 				found(v, line)
+			}
+			// A YAML key with a block under it: "gpt-4o:".
+			if k, ok := strings.CutSuffix(trimmed, ":"); ok && !strings.ContainsAny(k, " \t:\"'") {
+				found(k, line)
 			}
 		case "code":
 			// A line that is nothing but a model ID: one entry of a list
@@ -360,13 +402,47 @@ func scanFile(name, kind string, found func(s string, line int)) (read bool, err
 	return true, nil
 }
 
-func commentLine(t, kind string) bool {
-	for _, p := range []string{"//", "/*", "* ", "#", "--", "<!--"} {
-		if strings.HasPrefix(t, p) {
+// commentLine says whether a trimmed line is a whole-line comment: it starts
+// with one of the file's comment marks, or continues a /* */ block (" * ").
+// A line that opens a block comment and closes it again ("/* x */ code") is
+// read.
+func commentLine(t string, marks []string) bool {
+	for _, m := range marks {
+		if !strings.HasPrefix(t, m) {
+			continue
+		}
+		if m == "/*" && strings.Contains(t[2:], "*/") && !strings.HasSuffix(t, "*/") {
+			return false
+		}
+		return true
+	}
+	for _, m := range marks {
+		if m == "/*" && (t == "*" || strings.HasPrefix(t, "* ") || t == "*/") {
 			return true
 		}
 	}
-	if t == "*" || (kind == "config" && strings.HasPrefix(t, ";")) {
+	return false
+}
+
+// commentAt says whether a comment starts at line[i], outside a string.
+func commentAt(line string, i int, marks []string) bool {
+	for _, m := range marks {
+		if !strings.HasPrefix(line[i:], m) {
+			continue
+		}
+		switch m {
+		case "/*":
+			// An inline block comment ends on the line; only an open one
+			// hides the rest.
+			if strings.Contains(line[i+2:], "*/") {
+				return false
+			}
+		case "#", ";":
+			// "#" right after a word or symbol (a#b, C#) isn't a comment.
+			if i > 0 && line[i-1] != ' ' && line[i-1] != '\t' {
+				return false
+			}
+		}
 		return true
 	}
 	return false
@@ -375,10 +451,14 @@ func commentLine(t, kind string) bool {
 // quoted returns the contents of the quoted strings on a line: "...",
 // '...' and `...`, with backslash escapes skipped. A quote left open runs to
 // the end of the line and is dropped.
-func quoted(line string) []string {
+func quoted(line string, marks []string) []string {
 	var out []string
 	prefixCheck := false
+	last := 0
 	for i := 0; i < len(line); i++ {
+		if commentAt(line, i, marks) {
+			return out
+		}
 		q := line[i]
 		if q != '"' && q != '\'' && q != '`' {
 			continue
@@ -399,6 +479,10 @@ func quoted(line string) []string {
 		}
 		// Strings tested as prefixes or substrings of a model name
 		// (startswith("gemini-2.5"), "o4" in name) are families, not models.
+		// The test's arguments end where its parenthesis closes.
+		if prefixCheck && strings.Contains(line[last:i], ")") {
+			prefixCheck = false
+		}
 		if !prefixCheck && prefixTest.MatchString(line[:i]) {
 			prefixCheck = true
 		}
@@ -410,6 +494,7 @@ func quoted(line string) []string {
 			out = append(out, line[i+1:j])
 		}
 		i = j
+		last = j + 1
 	}
 	return out
 }
@@ -418,7 +503,7 @@ func quoted(line string) []string {
 // substring test; every later string on the line is part of the same test.
 var prefixTest = regexp.MustCompile(`(?i)(starts_?with|ends_?with|hasprefix|hassuffix|has_prefix|includes|contains|index_?of|search|match)\s*\(\s*\(?\s*$`)
 
-var replaceArg = regexp.MustCompile(`(?i)replace(all)?\s*\(\s*$`)
+var replaceArg = regexp.MustCompile(`(?i)(replace(all)?|\bre\.sub|\bgsub|\bsub)\s*\(\s*$`)
 
 // substringTest matches what follows a string tested as part of a name
 // ("gemini-2.5" in model). Membership in a list of whole names

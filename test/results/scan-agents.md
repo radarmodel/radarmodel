@@ -14,9 +14,9 @@ and the results were checked by hand, both ways:
 
 | Repo | Commit | Files read | Models found | Lines |
 |---|---|---|---|---|
-| [Aider-AI/aider](https://github.com/Aider-AI/aider) | 5dc9490 | 228 | 189 | 716 |
-| [assafelovic/gpt-researcher](https://github.com/assafelovic/gpt-researcher) | 3582a68 | 533 | 53 | 196 |
-| [browser-use/browser-use](https://github.com/browser-use/browser-use) | b49a68e | 445 | 185 | 440 |
+| [Aider-AI/aider](https://github.com/Aider-AI/aider) | 5dc9490 | 228 | 189 | 714 |
+| [assafelovic/gpt-researcher](https://github.com/assafelovic/gpt-researcher) | 3582a68 | 528 | 53 | 196 |
+| [browser-use/browser-use](https://github.com/browser-use/browser-use) | b49a68e | 445 | 184 | 435 |
 
 ## Found
 
@@ -28,6 +28,13 @@ support. No prose, comment, URL or file name was reported.
 One finding is a real bug: browser-use's default model in one place is
 `gpt-o4-mini`, which no provider lists. RadarModel reports it as unlisted
 once a snapshot of OpenAI's list is stored, which is what it is for.
+
+After the review, the scan also leaves out strings in comments after code,
+file names, `package.json`, bare `o2` and `o4` to `o9` (only `o1` and `o3`
+exist on their own), and a config value read twice. On these repos that
+dropped browser-use's `'o4'` (an entry in a list of reasoning-model
+prefixes) and gpt-researcher's five `package.json` files, which held no
+model, and removed doubled locations.
 
 Accepted on purpose: a list of model-name prefixes the code loops over
 (`for pattern in ["gpt-4o", ...]`) is reported, because a list is how code

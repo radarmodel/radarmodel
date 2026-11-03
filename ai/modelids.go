@@ -18,7 +18,7 @@ var idFamilies = []struct {
 }{
 	// Google before OpenAI: text-embedding-004 is Google's.
 	{Google, regexp.MustCompile(`^(gemini-[0-9a-z][0-9a-z.\-]*|gemma-[0-9a-z][0-9a-z.\-]*|imagen-[0-9a-z][0-9a-z.\-]*|veo-[0-9a-z][0-9a-z.\-]*|text-embedding-00[0-9]|embedding-00[0-9]|text-multilingual-embedding-00[0-9]|learnlm-[0-9a-z.\-]+|aqa)$`)},
-	{OpenAI, regexp.MustCompile(`^(gpt-[0-9a-z][0-9a-z.\-]*|chatgpt-[0-9a-z][0-9a-z.\-]*|o[1-9](-[0-9a-z][0-9a-z.\-]*)?|text-embedding-[0-9a-z][0-9a-z.\-]*|dall-e-[23]|whisper-1|tts-1(-hd)?(-[0-9]{4})?|omni-moderation-[0-9a-z.\-]+|text-moderation-[0-9a-z.\-]+|davinci-002|babbage-002|computer-use-preview[0-9a-z.\-]*|codex-mini[0-9a-z.\-]*)$`)},
+	{OpenAI, regexp.MustCompile(`^(gpt-[0-9a-z][0-9a-z.\-]*|chatgpt-[0-9a-z][0-9a-z.\-]*|o[13]|o[1-9]-[0-9a-z][0-9a-z.\-]*|text-embedding-[0-9a-z][0-9a-z.\-]*|dall-e-[23]|whisper-1|tts-1(-hd)?(-[0-9]{4})?|omni-moderation-[0-9a-z.\-]+|text-moderation-[0-9a-z.\-]+|davinci-002|babbage-002|computer-use-preview[0-9a-z.\-]*|codex-mini[0-9a-z.\-]*)$`)},
 	// Anthropic's IDs have no dots (claude-3-5-sonnet); claude-3.5-sonnet
 	// is how routers such as OpenRouter write it.
 	{Anthropic, regexp.MustCompile(`^claude-[0-9a-z][0-9a-z\-]*$`)},
@@ -39,7 +39,22 @@ var openRouterVendors = map[string]string{
 
 var routerID = regexp.MustCompile(`^([a-z0-9][a-z0-9\-]*)/([a-z0-9][a-z0-9.\-_]*(:[a-z]+)?)$`)
 
-// needsDigit is true for families whose names carry a version.
+// fileExts are endings that make a string a file name (gpt-4o.png), not a
+// model ID.
+var fileExts = map[string]bool{
+	"png": true, "jpg": true, "jpeg": true, "gif": true, "svg": true, "webp": true, "ico": true,
+	"json": true, "yaml": true, "yml": true, "toml": true, "md": true, "txt": true, "csv": true, "log": true,
+	"py": true, "js": true, "ts": true, "go": true, "rb": true, "html": true, "css": true, "pdf": true,
+	"zip": true, "gz": true, "tar": true, "bin": true, "pt": true, "gguf": true, "safetensors": true, "onnx": true,
+	"mp3": true, "mp4": true, "wav": true, "sh": true, "jsonl": true, "parquet": true, "pkl": true,
+}
+
+func fileName(s string) bool {
+	i := strings.LastIndexByte(s, '.')
+	return i > 0 && fileExts[strings.ToLower(s[i+1:])]
+}
+
+// hasDigit is true for families whose names carry a version.
 func hasDigit(s string) bool { return strings.ContainsAny(s, "0123456789") }
 
 // Candidate is a model name found in a string, before it is assigned to a
@@ -99,6 +114,9 @@ func RecognizeModel(s string) (Candidate, bool) {
 			}
 		}
 		return c, true
+	}
+	if fileName(s) {
+		return Candidate{}, false
 	}
 	for _, f := range idFamilies {
 		if !f.re.MatchString(s) {

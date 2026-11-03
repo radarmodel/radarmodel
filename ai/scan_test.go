@@ -50,7 +50,7 @@ func TestRecognizeModel(t *testing.T) {
 }
 
 func TestQuotedAndConfigValues(t *testing.T) {
-	got := quoted(`model = "gpt-4o"; alt = 'claude-sonnet-4-5' ` + "`gemini-2.5-flash`" + ` don't 'x\'y'`)
+	got := quoted(`model = "gpt-4o"; alt = 'claude-sonnet-4-5' `+"`gemini-2.5-flash`"+` don't 'x\'y'`, nil)
 	want := []string{"gpt-4o", "claude-sonnet-4-5", "gemini-2.5-flash", `x\'y`}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Errorf("quoted: %q", got)
@@ -211,5 +211,52 @@ func TestScanRejectsBadInput(t *testing.T) {
 	}
 	if _, err := Scan([]string{t.TempDir()}, nil, WatchList{}, nil, ScanOptions{Exclude: []string{"["}}); err == nil {
 		t.Error("a bad exclude pattern was accepted")
+	}
+}
+
+// Cases from the 0.3.0 review.
+func TestReview030Scan(t *testing.T) {
+	dir := t.TempDir()
+	write := func(name, body string) {
+		t.Helper()
+		p := filepath.Join(dir, "src", name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("a.py", "model = \"gpt-4.1\"  # was \"gpt-4o-2024-05-13\" before\nif model.startswith(\"gpt-4\"): use = \"gpt-5\"\nx = re.sub(\"gpt-3\", \"gpt-4.1-mini\", y)\n")
+	write("b.js", "const m = \"gpt-4.1\"; // replaced \"gpt-3.5-turbo-0301\"\nconst icon = \"gpt-4o.png\"\n/* x */ const n = \"claude-sonnet-4-5\"\nif (name.includes(\"gpt-4\")) { m2 = \"gpt-4.1-nano\" }\n")
+	write("c.json", `{"version": "o1x", "sha": "o9", "id": "o2", "m": "o3"}`+"\n")
+	write("package.json", `{"dependencies":{"gpt-3-encoder":"^1.1.4"},"files":["gpt-4o.svg"]}`+"\n")
+	write("run.sh", "aider \\\n  --model \"gpt-4o\" \\\n")
+	write("s.toml", "fallback = 'gemini/gemini-2.0-flash'\n")
+	write("m.yaml", "models:\n  gpt-4o-mini:\n    max_tokens: 10\n")
+	write("x.lua", "-- \"gpt-3.5-turbo\"\nlocal m = \"o3-mini\"\n")
+	if err := os.Symlink(filepath.Join(dir, "src"), filepath.Join(dir, "link")); err != nil {
+		t.Skip("no symlinks here")
+	}
+	res, err := Scan([]string{filepath.Join(dir, "link")}, []ProviderConfig{{Type: OpenAI}, {Type: Anthropic}, {Type: Google}}, WatchList{}, nil, ScanOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string][]Location{}
+	for _, f := range res.Found {
+		got[f.ID] = f.Locations
+	}
+	for _, want := range []string{"gpt-4.1", "gpt-5", "gpt-4.1-mini", "claude-sonnet-4-5", "gpt-4.1-nano", "o3", "gpt-4o", "gemini-2.0-flash", "gpt-4o-mini", "o3-mini"} {
+		if _, ok := got[want]; !ok {
+			t.Errorf("missed %s", want)
+		}
+	}
+	for _, bad := range []string{"gpt-4o-2024-05-13", "gpt-3.5-turbo-0301", "gpt-4o.png", "gpt-4o.svg", "gpt-3-encoder", "o9", "o2", "gpt-4", "gpt-3", "gpt-3.5-turbo"} {
+		if _, ok := got[bad]; ok {
+			t.Errorf("reported %s", bad)
+		}
+	}
+	if l := got["gemini-2.0-flash"]; len(l) != 1 {
+		t.Errorf("gemini-2.0-flash locations %v, want one", l)
 	}
 }
