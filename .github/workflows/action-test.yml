@@ -129,3 +129,40 @@ jobs:
           test "$D" = 1
           grep -q 'BREAKING' "$REPORT"
           grep -q 'customers.name' "$REPORT"
+
+  # The download path: the action fetches its own release (from doc.go, as
+  # when pinned by commit) and checks SHA256SUMS. Run by hand after a
+  # release:
+  #   gh api -X POST repos/radarmodel/radarmodel/actions/workflows/action-test.yml/dispatches -f ref=main
+  download:
+    if: github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: An offline config
+        run: |
+          mkdir -p t/api/v1
+          printf '{"data":[{"id":"gpt-4o"}]}' > t/api/v1/models
+          root=$PWD; if command -v cygpath > /dev/null; then root=/$(cygpath -m "$PWD"); fi
+          printf '{"providers":[{"type":"openai","base_url":"file://%s/t/api"}],"watch":["openai:gpt-4o"]}\n' "$root" > t/radarmodel.json
+      - id: run
+        uses: ./
+        with:
+          config: t/radarmodel.json
+          comment: none
+          cache: "false"
+      - name: It ran the downloaded release
+        env:
+          CODE: ${{ steps.run.outputs.exit-code }}
+          REPORT: ${{ steps.run.outputs.report }}
+        run: |
+          test "$CODE" = 0
+          grep -q 'baseline of 1 items' "$REPORT"

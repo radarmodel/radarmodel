@@ -30,6 +30,10 @@ inputs:
     description: Label of that issue.
     required: false
     default: radarmodel
+  comment-key:
+    description: Keeps this report's comment apart from others the action posts in the same repository. Empty means the product (ai or schema); set it when one repository checks several configs of one product.
+    required: false
+    default: ""
   state-dir:
     description: The config's state folder, kept between runs in the Actions cache. Empty means .radarmodel next to the config.
     required: false
@@ -51,7 +55,7 @@ inputs:
     required: false
     default: "true"
   version:
-    description: "RadarModel release to use (v0.5.0 or later), or latest. Empty means the release this action is pinned to (radarmodel/radarmodel@v0.5.0 runs 0.5.0), else the latest."
+    description: "RadarModel release to use (v0.5.0 or later), or latest. Empty means the release of the action's own code: the vX.Y.Z tag it's used at, or else the version its doc.go names (so a pin by commit gets that commit's release)."
     required: false
     default: ""
   radarmodel-path:
@@ -95,8 +99,16 @@ runs:
           exit 0
         fi
         if [ -z "$RM_VERSION" ]; then
-          if [[ "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then RM_VERSION="$ACTION_REF"; else RM_VERSION=latest; fi
+          if [[ "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            RM_VERSION="$ACTION_REF"
+          else
+            # Pinned by commit or a moving ref: the version in the action's
+            # own code, so the binary matches this action.yml.
+            v=$(sed -n 's/^const Version = "\([0-9]*\.[0-9]*\.[0-9]*\)"$/\1/p' "$GITHUB_ACTION_PATH/doc.go" 2>/dev/null || true)
+            if [ -n "$v" ]; then RM_VERSION="v$v"; else RM_VERSION=latest; fi
+          fi
         fi
+        echo "RadarModel $RM_VERSION"
         case "$RUNNER_OS" in
           Linux) os=linux ;; macOS) os=darwin ;; Windows) os=windows ;;
           *) echo "::error::RadarModel has no build for $RUNNER_OS"; exit 1 ;;
@@ -133,9 +145,13 @@ runs:
         IN_STATE: ${{ inputs.state-dir }}
         IN_TITLE: ${{ inputs.issue-title }}
         IN_COMMENT: ${{ inputs.comment }}
+        IN_KEY: ${{ inputs.comment-key }}
         EVENT: ${{ github.event_name }}
       run: |
         set -euo pipefail
+        for v in "$IN_PRODUCT" "$IN_CONFIG" "$IN_STATE" "$IN_TITLE" "$IN_COMMENT" "$IN_KEY"; do
+          case "$v" in *$'\n'*|*$'\r'*) echo "::error::inputs can't hold line breaks"; exit 1 ;; esac
+        done
         case "$IN_PRODUCT" in
           ai) cmd=radarmodel-ai; cfg="${IN_CONFIG:-radarmodel.json}"; title="${IN_TITLE:-RadarModel: model drift}" ;;
           schema) cmd=radarmodel-schema; cfg="${IN_CONFIG:-radarmodel-schema.json}"; title="${IN_TITLE:-RadarModel: schema drift}" ;;
@@ -148,9 +164,14 @@ runs:
           case "$EVENT" in pull_request|pull_request_target) mode=pr ;; *) mode=issue ;; esac
         fi
         case "$mode" in pr|issue|none) ;; *) echo "::error::comment must be auto, pr, issue or none, not $mode"; exit 1 ;; esac
+        # The cache key names the product and config path, not the config's
+        # content, so editing the config keeps the stored snapshots.
+        cachekey="radarmodel-$IN_PRODUCT-$(printf '%s' "$cfg" | tr -c 'A-Za-z0-9._-' '_')"
         {
           echo "cmd=$cmd"
           echo "config=$cfg"
+          echo "cachekey=$cachekey"
+          echo "key=${IN_KEY:-$IN_PRODUCT}"
           echo "state=$state"
           echo "title=$title"
           echo "mode=$mode"
@@ -161,9 +182,9 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: ${{ steps.settings.outputs.state }}
-        key: radarmodel-${{ inputs.product }}-${{ hashFiles(steps.settings.outputs.config) }}-${{ github.run_id }}-${{ github.run_attempt }}
+        key: ${{ steps.settings.outputs.cachekey }}-${{ github.run_id }}-${{ github.run_attempt }}
         restore-keys: |
-          radarmodel-${{ inputs.product }}-${{ hashFiles(steps.settings.outputs.config) }}-
+          ${{ steps.settings.outputs.cachekey }}-
 
     - name: Check
       id: run
@@ -181,7 +202,11 @@ runs:
         # step before its exit code is recorded.
         set +e -u
         bin="$RM_DIR/$RM_CMD"
-        report="$RUNNER_TEMP/radarmodel-report.md"
+        # A file of this run's own: a check that stops before writing its
+        # report leaves no file, never an earlier run's.
+        report=$(mktemp "$RUNNER_TEMP/radarmodel-report.XXXXXX")
+        rm -f "$report"
+        report="$report.md"
         "$bin" check -config "$RM_CONFIG" -min "$IN_MIN" -no-alerts -markdown "$report"
         code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
@@ -202,10 +227,14 @@ runs:
             scode=$?
             echo "scan-exit-code=$scode" >> "$GITHUB_OUTPUT"
             cat "$RUNNER_TEMP/radarmodel-scan.txt"
+            if [ "$scode" -eq 1 ]; then
+              echo "::error::RadarModel scan: the code calls models the watch list doesn't cover"
+            elif [ "$scode" -ne 0 ]; then
+              echo "::error::RadarModel scan couldn't run; see the log"
+            fi
             if [ "$scode" -ne 0 ]; then
               result=fail
-              echo "::error::RadarModel scan: the code calls models the watch list doesn't cover"
-              { echo; echo "#### Models in the code"; echo; echo '```'; cat "$RUNNER_TEMP/radarmodel-scan.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+              { echo; echo "#### Models in the code"; echo; echo '~~~~~~~~'; cat "$RUNNER_TEMP/radarmodel-scan.txt"; echo '~~~~~~~~'; } >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
         fi
@@ -216,7 +245,7 @@ runs:
       uses: actions/cache/save@v4
       with:
         path: ${{ steps.settings.outputs.state }}
-        key: radarmodel-${{ inputs.product }}-${{ hashFiles(steps.settings.outputs.config) }}-${{ github.run_id }}-${{ github.run_attempt }}
+        key: ${{ steps.settings.outputs.cachekey }}-${{ github.run_id }}-${{ github.run_attempt }}
 
     - name: Post the report
       if: steps.settings.outputs.mode != 'none' && steps.run.outputs.report != ''
@@ -227,7 +256,12 @@ runs:
         ISSUE_LABEL: ${{ inputs.issue-label }}
         MODE: ${{ steps.settings.outputs.mode }}
         REPORT: ${{ steps.run.outputs.report }}
-      run: bash "$GITHUB_ACTION_PATH/scripts/action-comment.sh" "$MODE" "$REPORT"
+        COMMENT_KEY: ${{ steps.settings.outputs.key }}
+      run: |
+        # Posting is best effort: a forked pull request's token can't write,
+        # and that mustn't fail a check that passed.
+        bash "$GITHUB_ACTION_PATH/scripts/action-comment.sh" "$MODE" "$REPORT" ||
+          echo "::warning::RadarModel couldn't post the report (a pull request from a fork, or missing issues/pull-requests: write); it's in the job summary"
 
     - name: Result
       if: inputs.fail == 'true' && steps.run.outputs.result == 'fail'

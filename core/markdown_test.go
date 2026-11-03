@@ -44,6 +44,27 @@ func TestReportMarkdown(t *testing.T) {
 	if strings.Contains(out, "gpt-5") {
 		t.Errorf("info change shown:\n%s", out)
 	}
+	// Names can't escape their code span or cell, or mention anyone (0.5 review).
+	b.Reset()
+	(&Report{Product: "P", Results: []SourceResult{{Source: "db", Items: 1, Changes: []Change{
+		{Kind: Removed, ID: "a`` @octocat ``b", Severity: Breaking, Watched: true},
+		{Kind: Removed, ID: "x\r| @y", Severity: Breaking, Watched: true},
+		{Kind: Changed, ID: "z", Field: "name", Old: "a", New: "&#64;org/team", Severity: Warning, Watched: true},
+	}}}}).WriteMarkdown(&b, Warning)
+	out = b.String()
+	if !strings.Contains(out, "``` a`` @octocat ``b ```") || strings.Contains(out, "\r") || !strings.Contains(out, `\&\#64;org`) {
+		t.Errorf("escaping:\n%s", out)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "| db") {
+			if n := strings.Count(strings.ReplaceAll(line, "\\|", ""), "|"); n != 5 {
+				t.Errorf("row with %d cell borders: %s", n, line)
+			}
+		}
+	}
+	if got := oneLine(strings.Repeat("é", 200)); !strings.HasSuffix(got, "é...") {
+		t.Errorf("cut inside a character: %q", got[len(got)-6:])
+	}
 	b.Reset()
 	(&Report{Product: "P", Results: []SourceResult{{Source: "a", Items: 2}}}).WriteMarkdown(&b, Warning)
 	if !strings.Contains(b.String(), "No changes at warning or above.") {

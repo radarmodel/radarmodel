@@ -335,13 +335,24 @@ jobs:
   report); otherwise an open issue titled "RadarModel: model drift" with the
   label `radarmodel`, opened on the first report worth reading and commented
   on after that. `pr`, `issue` or `none` picks one.
-- **State.** The snapshots are kept in the Actions cache between runs
+- **State.** The snapshots are kept in the Actions cache between runs,
+  keyed by product and config path, so editing the config keeps them
   (`cache: false` when you keep them another way). A pull request reads the
   base branch's latest snapshots. A cache GitHub evicted (after 7 days
   unused) means the next run is a new baseline, so run it at least weekly.
+- **Comments.** Each report keeps its own comment (`comment-key`, the
+  product by default), and only comments the action's own account wrote are
+  updated. An issue gets a comment only when the report differs from the
+  last one. A pull request from a fork has a read-only token: the report
+  stays in the job summary and the step warns instead of failing.
+- **Not with `pull_request_target`** and a checkout of the pull request's
+  code: the PR's config could send your API keys to its own `base_url`.
+  Use `pull_request`.
 - **Inputs:** `product` (`ai` or `schema`), `config`, `min-severity`,
-  `comment`, `issue-title`, `issue-label`, `state-dir`, `cache`, `scan`,
-  `scan-path`, `fail` (`false` reports without failing), `version`.
+  `comment`, `issue-title`, `issue-label`, `comment-key`, `state-dir`,
+  `cache`, `scan`, `scan-path`, `fail` (`false` reports without failing),
+  `version` (by default the release of the action's own code, also when it's
+  pinned by commit).
   **Outputs:** `exit-code`, `scan-exit-code`, `result`, `report` (the
   Markdown file).
 - For RadarModel Schema, set `product: schema` and pass the connection

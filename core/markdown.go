@@ -68,7 +68,7 @@ func mdText(s string) string {
 	var b strings.Builder
 	for _, r := range s {
 		switch r {
-		case '\\', '|', '*', '_', '`', '[', ']', '<', '>', '#', '!', '~':
+		case '\\', '|', '*', '_', '`', '[', ']', '<', '>', '#', '!', '~', '&':
 			b.WriteByte('\\')
 			b.WriteRune(r)
 		case '@':
@@ -82,13 +82,24 @@ func mdText(s string) string {
 	return b.String()
 }
 
-// mdCode puts s in a code span that its own backticks can't close.
+// mdCode puts s in a code span that its own backticks can't close: the
+// fence is one backtick longer than the longest run in s.
 func mdCode(s string) string {
 	s = strings.ReplaceAll(oneLine(s), "|", "\\|")
-	if !strings.Contains(s, "`") {
+	longest, run := 0, 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '`' {
+			run++
+			longest = max(longest, run)
+		} else {
+			run = 0
+		}
+	}
+	if longest == 0 {
 		return "`" + s + "`"
 	}
-	return "`` " + s + " ``"
+	fence := strings.Repeat("`", longest+1)
+	return fence + " " + s + " " + fence
 }
 
 func plural(n int, one, many string) string {

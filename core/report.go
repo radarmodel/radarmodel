@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/tabwriter"
 	"time"
+	"unicode/utf8"
 )
 
 // Exit codes shared by every RadarModel command.
@@ -180,9 +181,14 @@ func (r *Report) WriteText(w io.Writer, min Severity) error {
 }
 
 func oneLine(s string) string {
-	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ", "\t", " ").Replace(s)
 	if len(s) > 300 {
-		s = s[:300] + "..."
+		// Cut on a character boundary, not inside one.
+		cut := 300
+		for cut > 0 && !utf8.RuneStart(s[cut]) {
+			cut--
+		}
+		s = s[:cut] + "..."
 	}
 	return s
 }
