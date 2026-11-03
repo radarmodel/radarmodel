@@ -44,6 +44,8 @@ Flags for check and watch:
   -json          print the report as JSON
   -no-alerts     don't send webhook, Slack or email alerts
   -dry-run       compare but keep the stored snapshots (check only)
+  -markdown FILE also write the report as Markdown, for a CI job summary or
+                 a pull request comment (check only)
 
 Exit codes for check: 0 nothing breaking, 1 a breaking change,
 2 a provider couldn't be scanned or the config is wrong.
@@ -183,8 +185,10 @@ func cmdCheck(args []string, stdout, stderr io.Writer, loop bool) int {
 	asJSON := fs.Bool("json", false, "print JSON")
 	noAlerts := fs.Bool("no-alerts", false, "don't send alerts")
 	dryRun := false
+	markdown := ""
 	if !loop {
 		fs.BoolVar(&dryRun, "dry-run", false, "keep the stored snapshots")
+		fs.StringVar(&markdown, "markdown", "", "also write the report as Markdown to `FILE`")
 	}
 	if err := fs.Parse(args); err != nil {
 		return core.ExitError
@@ -229,6 +233,12 @@ func cmdCheck(args []string, stdout, stderr io.Writer, loop bool) int {
 		} else {
 			fmt.Fprintf(stdout, "%s  %s\n", rep.At.Format(time.RFC3339), core.Headline(rep, show))
 			rep.WriteText(stdout, show)
+		}
+		if markdown != "" {
+			if err := core.WriteMarkdownFile(markdown, rep, show); err != nil {
+				fmt.Fprintln(stderr, err)
+				return core.ExitError
+			}
 		}
 		alert := rep
 		if sent != nil {

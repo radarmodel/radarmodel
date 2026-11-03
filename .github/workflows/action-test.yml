@@ -1,0 +1,131 @@
+name: action-test
+
+# Tests action.yml with binaries built from this commit: an offline AI
+# config read through a file:// list, a SQLite schema, the scan gate, and the
+# script that posts reports (against a fake gh). Comments aren't posted here.
+
+on:
+  push:
+    branches: [main]
+    paths: [action.yml, scripts/action-comment.sh, scripts/test-action-comment.sh, .github/workflows/action-test.yml, cmd/**, core/**, ai/**, schema/**]
+  pull_request:
+    paths: [action.yml, scripts/action-comment.sh, scripts/test-action-comment.sh, .github/workflows/action-test.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: stable
+      - name: Build
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p "$RUNNER_TEMP/rm"
+          go build -o "$RUNNER_TEMP/rm/" ./cmd/radarmodel-ai ./cmd/radarmodel-schema
+          echo "RM_BIN=$RUNNER_TEMP/rm" >> "$GITHUB_ENV"
+      - name: The comment script
+        run: bash scripts/test-action-comment.sh
+      - name: An AI config read offline
+        run: |
+          mkdir -p t/api/v1 t/code
+          list() { printf '{"data":[' > t/api/v1/models; s=; for m in "$@"; do printf '%s{"id":"%s"}' "$s" "$m" >> t/api/v1/models; s=,; done; printf ']}' >> t/api/v1/models; }
+          list gpt-4o gpt-4o-mini o3
+          root=$PWD; if command -v cygpath > /dev/null; then root=/$(cygpath -m "$PWD"); fi
+          printf '{"providers":[{"type":"openai","base_url":"file://%s/t/api"}],"watch":["openai:gpt-4o"]}\n' "$root" > t/radarmodel.json
+          printf 'MODEL = "gpt-4o"\nFALLBACK = "gpt-4o-mini"\n' > t/code/app.py
+          echo "ROOT=$root" >> "$GITHUB_ENV"
+      - id: baseline
+        uses: ./
+        with:
+          config: t/radarmodel.json
+          radarmodel-path: ${{ env.RM_BIN }}
+          comment: none
+          cache: "false"
+      - id: miss1
+        name: A watched model leaves the list
+        run: |
+          list() { printf '{"data":[' > t/api/v1/models; s=; for m in "$@"; do printf '%s{"id":"%s"}' "$s" "$m" >> t/api/v1/models; s=,; done; printf ']}' >> t/api/v1/models; }
+          list gpt-4o-mini o3
+      - id: warn
+        uses: ./
+        with:
+          config: t/radarmodel.json
+          radarmodel-path: ${{ env.RM_BIN }}
+          comment: none
+          cache: "false"
+      - id: breaking
+        uses: ./
+        with:
+          config: t/radarmodel.json
+          radarmodel-path: ${{ env.RM_BIN }}
+          comment: none
+          cache: "false"
+          fail: "false"
+          scan: "true"
+          scan-path: t/code
+      - name: Outputs are as expected
+        env:
+          B: ${{ steps.baseline.outputs.exit-code }}
+          W: ${{ steps.warn.outputs.exit-code }}
+          X: ${{ steps.breaking.outputs.exit-code }}
+          XR: ${{ steps.breaking.outputs.result }}
+          S: ${{ steps.breaking.outputs.scan-exit-code }}
+          REPORT: ${{ steps.breaking.outputs.report }}
+        run: |
+          set -x
+          test "$B" = 0
+          test "$W" = 0
+          test "$X" = 1
+          test "$XR" = fail
+          test "$S" = 1
+          grep -q '<!-- radarmodel-report -->' "$REPORT"
+          grep -q '| openai | \*\*BREAKING\*\* | `gpt-4o` (watched) |' "$REPORT"
+      - name: A SQLite schema
+        run: |
+          mkdir -p s
+          cp testdata/smoke-before.db s/app.db
+          echo '{"databases":[{"name":"app","driver":"sqlite","path":"app.db"}]}' > s/radarmodel-schema.json
+      - id: schema-baseline
+        uses: ./
+        with:
+          product: schema
+          config: s/radarmodel-schema.json
+          radarmodel-path: ${{ env.RM_BIN }}
+          comment: none
+          cache: "false"
+      - run: cp testdata/smoke-after.db s/app.db
+      - id: schema-drift
+        uses: ./
+        with:
+          product: schema
+          config: s/radarmodel-schema.json
+          radarmodel-path: ${{ env.RM_BIN }}
+          comment: none
+          cache: "false"
+          fail: "false"
+      - name: Schema outputs
+        env:
+          B: ${{ steps.schema-baseline.outputs.exit-code }}
+          D: ${{ steps.schema-drift.outputs.exit-code }}
+          REPORT: ${{ steps.schema-drift.outputs.report }}
+        run: |
+          set -x
+          test "$B" = 0
+          test "$D" = 1
+          grep -q 'BREAKING' "$REPORT"
+          grep -q 'customers.name' "$REPORT"

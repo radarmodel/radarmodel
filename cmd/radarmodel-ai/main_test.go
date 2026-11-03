@@ -202,3 +202,27 @@ func TestDropRepeatsForgetsAModelThatCameBack(t *testing.T) {
 		t.Fatal("a model missing again after coming back wasn't alerted")
 	}
 }
+
+func TestCheckWritesMarkdown(t *testing.T) {
+	dir, cfg, fake := setup(t)
+	md := filepath.Join(dir, "report.md")
+	call("check", "-config", cfg)
+	fake.mu.Lock()
+	fake.models = []string{"gpt-4o-mini", "o3"}
+	fake.mu.Unlock()
+	call("check", "-config", cfg)
+	code, _, errOut := call("check", "-config", cfg, "-markdown", md)
+	if code != core.ExitBreaking {
+		t.Fatalf("exit %d: %s", code, errOut)
+	}
+	b, err := os.ReadFile(md)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(b); !strings.Contains(s, core.MarkdownMarker) || !strings.Contains(s, "| openai | **BREAKING** | `gpt-4o` (watched) |") {
+		t.Fatalf("markdown:\n%s", s)
+	}
+	if code, _, _ := call("check", "-config", cfg, "-markdown", filepath.Join(dir, "missing", "r.md")); code != core.ExitError {
+		t.Fatalf("unwritable markdown file: exit %d", code)
+	}
+}

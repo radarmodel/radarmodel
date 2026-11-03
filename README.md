@@ -298,6 +298,55 @@ provider exits 1, and the report shows both. Use it as a CI gate.
 warning for a given model once rather than every interval, and again only if
 the model comes back and later goes missing again.
 
+## GitHub Action (from 0.5.0)
+
+The action runs `radarmodel-ai check` (or `radarmodel-schema check`), puts
+the report in the job summary, posts it where people will see it, and fails
+the build on a breaking change. It downloads the release it's pinned to and
+checks it against SHA256SUMS.
+
+```yaml
+# .github/workflows/radarmodel.yml
+on:
+  schedule: [{cron: "17 7 * * *"}]   # once a day: drift goes to an issue
+  pull_request:                     # on a pull request: a comment on it
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+jobs:
+  radarmodel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: radarmodel/radarmodel@v0.5.0
+        with:
+          scan: true        # also fail when the code calls a model the watch list misses
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+- **Where the report goes** (`comment`): on a pull request, one comment that
+  is updated on every run (it's created only when there is something to
+  report); otherwise an open issue titled "RadarModel: model drift" with the
+  label `radarmodel`, opened on the first report worth reading and commented
+  on after that. `pr`, `issue` or `none` picks one.
+- **State.** The snapshots are kept in the Actions cache between runs
+  (`cache: false` when you keep them another way). A pull request reads the
+  base branch's latest snapshots. A cache GitHub evicted (after 7 days
+  unused) means the next run is a new baseline, so run it at least weekly.
+- **Inputs:** `product` (`ai` or `schema`), `config`, `min-severity`,
+  `comment`, `issue-title`, `issue-label`, `state-dir`, `cache`, `scan`,
+  `scan-path`, `fail` (`false` reports without failing), `version`.
+  **Outputs:** `exit-code`, `scan-exit-code`, `result`, `report` (the
+  Markdown file).
+- For RadarModel Schema, set `product: schema` and pass the connection
+  strings' environment variables from secrets; the runner must reach the
+  database.
+
+`check -markdown FILE` writes the same Markdown report outside the action.
+
 ## RadarModel Schema
 
 Someone runs an `ALTER TABLE` by hand during an incident. An ORM auto-migrates

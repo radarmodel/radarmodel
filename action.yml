@@ -1,0 +1,235 @@
+name: RadarModel
+description: Report AI model and database schema drift in pull requests and issues, and fail the build on a breaking change.
+author: radarmodel.com
+branding:
+  icon: radio
+  color: blue
+
+inputs:
+  product:
+    description: "ai (radarmodel-ai: AI provider model lists) or schema (radarmodel-schema: database schemas)."
+    required: false
+    default: ai
+  config:
+    description: Config file. Empty means radarmodel.json for ai, radarmodel-schema.json for schema.
+    required: false
+    default: ""
+  min-severity:
+    description: "Lowest severity reported in the summary and comments: info, warning or breaking."
+    required: false
+    default: warning
+  comment:
+    description: "Where to post the report: auto (the pull request on pull_request events, an issue otherwise), pr, issue or none. Needs pull-requests: write or issues: write."
+    required: false
+    default: auto
+  issue-title:
+    description: 'Title of the issue that collects reports. Empty means "RadarModel: model drift" (ai) or "RadarModel: schema drift" (schema).'
+    required: false
+    default: ""
+  issue-label:
+    description: Label of that issue.
+    required: false
+    default: radarmodel
+  state-dir:
+    description: The config's state folder, kept between runs in the Actions cache. Empty means .radarmodel next to the config.
+    required: false
+    default: ""
+  cache:
+    description: Keep the state folder in the Actions cache. Set to false when it's kept another way (committed, or on a self-hosted runner's disk).
+    required: false
+    default: "true"
+  scan:
+    description: "ai only: also run radarmodel-ai scan -check on scan-path, so the build fails when the code calls a model the watch list doesn't cover."
+    required: false
+    default: "false"
+  scan-path:
+    description: Folder for scan.
+    required: false
+    default: "."
+  fail:
+    description: Fail the step on a breaking change, a source that couldn't be scanned, or a failed scan -check. Set to false to report only.
+    required: false
+    default: "true"
+  version:
+    description: "RadarModel release to use (v0.5.0 or later), or latest. Empty means the release this action is pinned to (radarmodel/radarmodel@v0.5.0 runs 0.5.0), else the latest."
+    required: false
+    default: ""
+  radarmodel-path:
+    description: Folder holding radarmodel-ai and radarmodel-schema binaries to use instead of downloading them (for testing the action itself).
+    required: false
+    default: ""
+  token:
+    description: Token for posting comments and issues.
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  exit-code:
+    description: "The check's exit code: 0 nothing breaking, 1 a breaking change, 2 a source couldn't be scanned or the config is wrong."
+    value: ${{ steps.run.outputs.exit-code }}
+  scan-exit-code:
+    description: "scan -check's exit code when scan is on: 0 covered, 1 the code calls models the watch list misses."
+    value: ${{ steps.run.outputs.scan-exit-code }}
+  result:
+    description: pass or fail
+    value: ${{ steps.run.outputs.result }}
+  report:
+    description: The Markdown report file
+    value: ${{ steps.run.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install RadarModel
+      id: install
+      shell: bash
+      env:
+        RM_VERSION: ${{ inputs.version }}
+        RM_PATH: ${{ inputs.radarmodel-path }}
+        ACTION_REF: ${{ github.action_ref }}
+      run: |
+        set -euo pipefail
+        ACTION_REF="${ACTION_REF:-${GITHUB_ACTION_REF:-}}"
+        if [ -n "$RM_PATH" ]; then
+          echo "dir=$RM_PATH" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        if [ -z "$RM_VERSION" ]; then
+          if [[ "$ACTION_REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then RM_VERSION="$ACTION_REF"; else RM_VERSION=latest; fi
+        fi
+        case "$RUNNER_OS" in
+          Linux) os=linux ;; macOS) os=darwin ;; Windows) os=windows ;;
+          *) echo "::error::RadarModel has no build for $RUNNER_OS"; exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          X64) arch=amd64 ;; ARM64) arch=arm64 ;;
+          *) echo "::error::RadarModel has no build for $RUNNER_ARCH"; exit 1 ;;
+        esac
+        if [ "$os" = windows ] && [ "$arch" != amd64 ]; then echo "::error::RadarModel has no Windows $arch build"; exit 1; fi
+        ext=tar.gz; [ "$os" = windows ] && ext=zip
+        name="radarmodel_${os}_${arch}.${ext}"
+        if [ "$RM_VERSION" = latest ]; then
+          base="https://github.com/radarmodel/radarmodel/releases/latest/download"
+        else
+          base="https://github.com/radarmodel/radarmodel/releases/download/${RM_VERSION}"
+        fi
+        dir="$RUNNER_TEMP/radarmodel-bin"
+        mkdir -p "$dir"
+        cd "$dir"
+        curl -fsSL --retry 3 -o "$name" "$base/$name" || { echo "::error::could not download $base/$name"; exit 1; }
+        curl -fsSL --retry 3 -o SHA256SUMS "$base/SHA256SUMS" || { echo "::error::could not download SHA256SUMS"; exit 1; }
+        want=$(awk -v n="$name" '$2==n || $2=="*"n {print $1}' SHA256SUMS)
+        if command -v sha256sum >/dev/null; then got=$(sha256sum "$name" | cut -d' ' -f1); else got=$(shasum -a 256 "$name" | cut -d' ' -f1); fi
+        if [ -z "$want" ] || [ "$want" != "$got" ]; then echo "::error::$name does not match SHA256SUMS"; exit 1; fi
+        if [ "$ext" = zip ]; then unzip -oq "$name"; else tar -xzf "$name"; fi
+        echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+    - name: Settings
+      id: settings
+      shell: bash
+      env:
+        IN_PRODUCT: ${{ inputs.product }}
+        IN_CONFIG: ${{ inputs.config }}
+        IN_STATE: ${{ inputs.state-dir }}
+        IN_TITLE: ${{ inputs.issue-title }}
+        IN_COMMENT: ${{ inputs.comment }}
+        EVENT: ${{ github.event_name }}
+      run: |
+        set -euo pipefail
+        case "$IN_PRODUCT" in
+          ai) cmd=radarmodel-ai; cfg="${IN_CONFIG:-radarmodel.json}"; title="${IN_TITLE:-RadarModel: model drift}" ;;
+          schema) cmd=radarmodel-schema; cfg="${IN_CONFIG:-radarmodel-schema.json}"; title="${IN_TITLE:-RadarModel: schema drift}" ;;
+          *) echo "::error::product must be ai or schema, not $IN_PRODUCT"; exit 1 ;;
+        esac
+        state="$IN_STATE"
+        if [ -z "$state" ]; then state="$(dirname "$cfg")/.radarmodel"; fi
+        mode="$IN_COMMENT"
+        if [ "$mode" = auto ]; then
+          case "$EVENT" in pull_request|pull_request_target) mode=pr ;; *) mode=issue ;; esac
+        fi
+        case "$mode" in pr|issue|none) ;; *) echo "::error::comment must be auto, pr, issue or none, not $mode"; exit 1 ;; esac
+        {
+          echo "cmd=$cmd"
+          echo "config=$cfg"
+          echo "state=$state"
+          echo "title=$title"
+          echo "mode=$mode"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Restore the state folder
+      if: inputs.cache == 'true'
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.settings.outputs.state }}
+        key: radarmodel-${{ inputs.product }}-${{ hashFiles(steps.settings.outputs.config) }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          radarmodel-${{ inputs.product }}-${{ hashFiles(steps.settings.outputs.config) }}-
+
+    - name: Check
+      id: run
+      shell: bash
+      env:
+        RM_DIR: ${{ steps.install.outputs.dir }}
+        RM_CMD: ${{ steps.settings.outputs.cmd }}
+        RM_CONFIG: ${{ steps.settings.outputs.config }}
+        IN_MIN: ${{ inputs.min-severity }}
+        IN_PRODUCT: ${{ inputs.product }}
+        IN_SCAN: ${{ inputs.scan }}
+        IN_SCAN_PATH: ${{ inputs.scan-path }}
+      run: |
+        # The runner starts bash with -e; a check exiting 1 must not end the
+        # step before its exit code is recorded.
+        set +e -u
+        bin="$RM_DIR/$RM_CMD"
+        report="$RUNNER_TEMP/radarmodel-report.md"
+        "$bin" check -config "$RM_CONFIG" -min "$IN_MIN" -no-alerts -markdown "$report"
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        result=pass
+        [ "$code" -eq 0 ] || result=fail
+        if [ -f "$report" ]; then
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          echo "report=$report" >> "$GITHUB_OUTPUT"
+        fi
+        if [ "$code" -eq 1 ]; then echo "::error::RadarModel: a breaking change; see the job summary"; fi
+        if [ "$code" -eq 2 ]; then echo "::error::RadarModel: a source couldn't be scanned or the config is wrong; see the log"; fi
+        if [ "$IN_SCAN" = true ]; then
+          if [ "$IN_PRODUCT" != ai ]; then
+            echo "::error::scan is for product: ai"
+            result=fail
+          else
+            "$RM_DIR/radarmodel-ai" scan -config "$RM_CONFIG" -check "$IN_SCAN_PATH" > "$RUNNER_TEMP/radarmodel-scan.txt"
+            scode=$?
+            echo "scan-exit-code=$scode" >> "$GITHUB_OUTPUT"
+            cat "$RUNNER_TEMP/radarmodel-scan.txt"
+            if [ "$scode" -ne 0 ]; then
+              result=fail
+              echo "::error::RadarModel scan: the code calls models the watch list doesn't cover"
+              { echo; echo "#### Models in the code"; echo; echo '```'; cat "$RUNNER_TEMP/radarmodel-scan.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+        fi
+        echo "result=$result" >> "$GITHUB_OUTPUT"
+
+    - name: Save the state folder
+      if: always() && inputs.cache == 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ steps.settings.outputs.state }}
+        key: radarmodel-${{ inputs.product }}-${{ hashFiles(steps.settings.outputs.config) }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+    - name: Post the report
+      if: steps.settings.outputs.mode != 'none' && steps.run.outputs.report != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        ISSUE_TITLE: ${{ steps.settings.outputs.title }}
+        ISSUE_LABEL: ${{ inputs.issue-label }}
+        MODE: ${{ steps.settings.outputs.mode }}
+        REPORT: ${{ steps.run.outputs.report }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/action-comment.sh" "$MODE" "$REPORT"
+
+    - name: Result
+      if: inputs.fail == 'true' && steps.run.outputs.result == 'fail'
+      shell: bash
+      run: exit 1
