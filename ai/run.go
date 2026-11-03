@@ -87,7 +87,7 @@ func (c *Config) Validate() (WatchList, error) {
 		if _, ok := defaultBase[p.Type]; !ok {
 			return WatchList{}, fmt.Errorf("providers[%d]: type %q is not one of %s", i, p.Type, strings.Join(providerTypes, ", "))
 		}
-		if p.Type == Azure && p.BaseURL == "" {
+		if p.Type == Azure && (p.BaseURL == "" || strings.Contains(p.BaseURL, "YOUR-RESOURCE")) {
 			return WatchList{}, fmt.Errorf("providers[%d]: azure needs base_url, the resource's endpoint (https://NAME.openai.azure.com)", i)
 		}
 		n := p.source()

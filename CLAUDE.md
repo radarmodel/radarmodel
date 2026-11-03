@@ -106,7 +106,7 @@ Steps:
 1. [x] Phase A code, tests, case studies, README
 2. [x] independent review (two rounds: 8 defects, then 8), fixes with tests
 3. [x] release 0.3.0; site post and pages; softdevstudio note; softdev-plan.md
-4. [ ] Phase B
+4. [ ] Phase B (code, tests and first review done; release next)
 5. [ ] Phase C
 
 ## Working here

@@ -61,9 +61,17 @@ func TestDiff(t *testing.T) {
 	}
 }
 
+// A list naming one item twice the same way keeps working (0.4 review).
+func TestNormalizeDropsIdenticalDuplicates(t *testing.T) {
+	s := &Snapshot{Source: "s", Items: []Item{{ID: "b"}, {ID: "a", Attrs: map[string]string{"n": "1"}}, {ID: "a", Attrs: map[string]string{"n": "1"}}}}
+	if err := s.Normalize(); err != nil || len(s.Items) != 2 {
+		t.Fatalf("%v %+v", err, s.Items)
+	}
+}
+
 func TestNormalizeRejectsDuplicatesAndEmptyIDs(t *testing.T) {
 	for _, s := range []*Snapshot{
-		{Source: "s", Items: []Item{{ID: "a"}, {ID: "a"}}},
+		{Source: "s", Items: []Item{{ID: "a", Attrs: map[string]string{"n": "1"}}, {ID: "a", Attrs: map[string]string{"n": "2"}}}},
 		{Source: "s", Items: []Item{{ID: ""}}},
 		{Items: []Item{{ID: "a"}}},
 	} {

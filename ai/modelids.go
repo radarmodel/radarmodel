@@ -22,17 +22,21 @@ var idFamilies = []struct {
 	// Anthropic's IDs have no dots (claude-3-5-sonnet); claude-3.5-sonnet
 	// is how routers such as OpenRouter write it.
 	{Anthropic, regexp.MustCompile(`^claude-[0-9a-z][0-9a-z\-]*$`)},
-	{XAI, regexp.MustCompile(`^grok-[0-9a-z][0-9a-z.\-]*$`)},
-	{Mistral, regexp.MustCompile(`^(mistral|codestral|pixtral|ministral|magistral|devstral|voxtral|open-mistral|open-mixtral)-[0-9a-z][0-9a-z.\-]*$`)},
-	// Groq's own names for the open models it hosts.
-	{Groq, regexp.MustCompile(`^[a-z0-9][a-z0-9.\-]*-(versatile|instant)$`)},
+	// xAI's API starts at Grok 2; grok-1 is the open-weight release.
+	{XAI, regexp.MustCompile(`^grok-(?:[2-9]|[1-9][0-9]|code-|vision-)[0-9a-z.\-]*$`)},
+	// Mistral's API names end in -latest or a release (mistral-small-2503);
+	// open-weight names (mistral-7b-instruct-v0.2) are other hosts' models.
+	{Mistral, regexp.MustCompile(`^(?:(?:mistral|codestral|pixtral|ministral|magistral|devstral|voxtral)(?:-[0-9a-z.\-]*)?-(?:latest|[0-9]{4})|open-(?:mistral|mixtral)-[0-9a-z.\-]+)$`)},
+	// Groq's own names for the open models it hosts: a size, then
+	// -versatile or -instant (llama-3.3-70b-versatile).
+	{Groq, regexp.MustCompile(`^[a-z][a-z0-9.\-]*-[0-9]+b-(?:versatile|instant)$`)},
 }
 
 // bedrockID matches Bedrock model IDs (anthropic.claude-sonnet-4-5-...-v1:0),
 // with the region prefix of a cross-region inference profile (us., eu.,
 // global.), which is left out of the ID: the foundation model list names the
 // model without it.
-var bedrockID = regexp.MustCompile(`^(?:(?:us|eu|apac|global|us-gov|jp|au|ca)\.)?((?:anthropic|meta|amazon|cohere|ai21|mistral|stability|deepseek|writer|qwen|openai|twelvelabs|luma)\.[a-z0-9][a-z0-9.\-]*(?::[0-9]+)?)$`)
+var bedrockID = regexp.MustCompile(`^(?:(?:us|eu|apac|global|us-gov|jp|au|ca)\.)?((?:anthropic|meta|amazon|cohere|ai21|mistral|stability|deepseek|writer|qwen|openai|twelvelabs|luma)\.[a-z0-9][a-z0-9.\-]*-(?:v[0-9]+(?::[0-9]+)?|[0-9]+:[0-9]+))$`)
 
 // routedPrefixes are LiteLLM's provider prefixes (bedrock/..., azure/...)
 // for the providers RadarModel reads; the rest is that provider's ID.

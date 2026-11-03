@@ -87,3 +87,29 @@ func TestMoreProvidersConfig(t *testing.T) {
 		t.Fatalf("bedrock without credentials: %q", e)
 	}
 }
+
+// From the 0.4 review: dates in another format are the same date; the
+// Azure placeholder written by scan -write must be replaced; a region must
+// look like one.
+func TestMoreProvidersReview(t *testing.T) {
+	for in, want := range map[string]string{"2027-01-15T00:00:00Z": "2027-01-15", "2027-01-15T00:00:00.000Z": "2027-01-15",
+		"2027-01-15": "2027-01-15", "2027-01-15T02:00:00+03:00": "2027-01-14", "soon": "soon"} {
+		if got := isoDate(in); got != want {
+			t.Errorf("isoDate(%q) = %q, want %q", in, got, want)
+		}
+	}
+	cfg := Config{Providers: []ProviderConfig{{Type: Azure, BaseURL: "https://YOUR-RESOURCE.openai.azure.com"}}}
+	if _, err := cfg.Validate(); err == nil {
+		t.Error("placeholder Azure address accepted")
+	}
+	h := newHarness(t)
+	t.Setenv("AWS_REGION", "evil.example.com/x")
+	h.cfg.Providers[8].BaseURL = ""
+	r := h.run(false)
+	if e := result(t, r, "bedrock").Error; !strings.Contains(e, "not an AWS region") {
+		t.Fatalf("bad region: %q", e)
+	}
+	if got := (ProviderConfig{Type: Bedrock, Region: "cn-north-1"}).base(); got != "https://bedrock.cn-north-1.amazonaws.com.cn" {
+		t.Fatalf("China base %q", got)
+	}
+}

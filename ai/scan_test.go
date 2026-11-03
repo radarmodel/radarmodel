@@ -331,7 +331,9 @@ func TestRecognizeMoreProviders(t *testing.T) {
 			t.Errorf("%q: got %v %+v, want %s", in, ok, c, want)
 		}
 	}
-	for _, in := range []string{"grok", "grok-beta", "mistral", "mistral-ai", "mistralai", "azure/my-deployment", "azure/storage-v2",
+	for _, in := range []string{"amazon.s3", "amazon.ec2", "amazon.dynamodb2", "openai.v1", "meta.v2", "deepseek.v3", "openai.resources.beta2", "amazon.com.v2",
+		"mistral-7b-instruct-v0.2", "mistral-7b", "grok-1", "node-18-instant", "win-10-instant",
+		"grok", "grok-beta", "mistral", "mistral-ai", "mistralai", "azure/my-deployment", "azure/storage-v2",
 		"bedrock/x", "groq/", "anthropic.com", "amazon.com", "meta.json", "us.example", "version-instant", "groq/My Model"} {
 		if c, ok := RecognizeModel(in); ok {
 			t.Errorf("%q taken for a model: %+v", in, c)

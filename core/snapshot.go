@@ -8,6 +8,7 @@ package core
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"time"
 )
@@ -37,15 +38,23 @@ func (s *Snapshot) Normalize() error {
 	if s.Source == "" {
 		return fmt.Errorf("snapshot has no source name")
 	}
-	sort.Slice(s.Items, func(i, j int) bool { return s.Items[i].ID < s.Items[j].ID })
-	for i, it := range s.Items {
+	sort.SliceStable(s.Items, func(i, j int) bool { return s.Items[i].ID < s.Items[j].ID })
+	kept := s.Items[:0]
+	for _, it := range s.Items {
 		if it.ID == "" {
 			return fmt.Errorf("%s: an item has an empty ID", s.Source)
 		}
-		if i > 0 && s.Items[i-1].ID == it.ID {
+		if n := len(kept); n > 0 && kept[n-1].ID == it.ID {
+			// A list that names one item twice the same way is read as
+			// naming it once; two different versions of it are an error.
+			if maps.Equal(kept[n-1].Attrs, it.Attrs) {
+				continue
+			}
 			return fmt.Errorf("%s: item %q appears twice", s.Source, it.ID)
 		}
+		kept = append(kept, it)
 	}
+	s.Items = kept
 	return nil
 }
 

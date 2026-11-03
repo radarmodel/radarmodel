@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -137,7 +138,11 @@ func (p ProviderConfig) base() string {
 		b = defaultBase[p.Type]
 	}
 	if b == "" && p.Type == Bedrock && p.region() != "" {
-		b = "https://bedrock." + p.region() + ".amazonaws.com"
+		host := "amazonaws.com"
+		if strings.HasPrefix(p.region(), "cn-") {
+			host = "amazonaws.com.cn"
+		}
+		b = "https://bedrock." + p.region() + "." + host
 	}
 	return strings.TrimRight(b, "/")
 }
@@ -238,7 +243,7 @@ func fetchCompatible(ctx context.Context, f *core.Fetcher, base, key string) ([]
 		}
 		dep, life := "", ""
 		if m.Deprecation != nil {
-			dep = *m.Deprecation
+			dep = isoDate(*m.Deprecation)
 		}
 		if m.Active != nil {
 			life = "active"
@@ -288,6 +293,19 @@ func fetchAzure(ctx context.Context, f *core.Fetcher, base, key string) ([]core.
 	return out, nil
 }
 
+var awsRegion = regexp.MustCompile(`^[a-z]{2}(-[a-z]+)+-[0-9]+$`)
+
+// isoDate keeps the date of an RFC 3339 time, so a change of format alone
+// (fractional seconds, a different offset notation) isn't a new date.
+func isoDate(s string) string {
+	for _, layout := range []string{time.RFC3339Nano, "2006-01-02T15:04:05", "2006-01-02"} {
+		if t, err := time.Parse(layout, strings.TrimSpace(s)); err == nil {
+			return t.UTC().Format("2006-01-02")
+		}
+	}
+	return s
+}
+
 // epochDate turns Unix seconds into a date; anything else is kept as given.
 func epochDate(s string) string {
 	n, err := strconv.ParseInt(s, 10, 64)
@@ -300,10 +318,15 @@ func epochDate(s string) string {
 // fetchBedrock reads Bedrock's ListFoundationModels, signed with the AWS
 // credentials in the environment.
 func fetchBedrock(ctx context.Context, f *core.Fetcher, p ProviderConfig) ([]core.Item, error) {
-	if p.region() == "" {
-		return nil, fmt.Errorf("bedrock needs a region: set \"region\" or AWS_REGION")
-	}
 	base := p.base()
+	if !strings.HasPrefix(base, "file:") {
+		if p.region() == "" {
+			return nil, fmt.Errorf("bedrock needs a region: set \"region\" or AWS_REGION")
+		}
+		if !awsRegion.MatchString(p.region()) {
+			return nil, fmt.Errorf("bedrock region %q is not an AWS region name", p.region())
+		}
+	}
 	creds := core.AWSCredentials{
 		AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
 		SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
@@ -343,7 +366,7 @@ func fetchBedrock(ctx context.Context, f *core.Fetcher, p ProviderConfig) ([]cor
 			AttrName, m.ModelName,
 			AttrOwner, m.ProviderName,
 			AttrLifecycle, strings.ToLower(m.ModelLifecycle.Status),
-			AttrExpires, m.ModelLifecycle.EndOfLifeTime))
+			AttrExpires, isoDate(m.ModelLifecycle.EndOfLifeTime)))
 	}
 	return out, nil
 }

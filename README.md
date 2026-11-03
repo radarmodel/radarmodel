@@ -155,7 +155,10 @@ for OpenAI models RadarModel AI can only tell you that a model is gone.
 Anthropic's has limits, lifecycle and retirement dates; Google's has limits
 and supported methods; OpenRouter's has limits, prices and retirement dates.
 Mistral's has context limits and retirement dates; Groq's has limits and
-whether a model is active; xAI's has IDs only. Azure's lists the models a
+whether a model is active; xAI's has IDs only. xAI also answers to aliases
+(`grok-4`, `grok-4-latest`) that may not be in its list: watch xAI models
+with a pattern such as `xai:grok-4*`, which never warns as unlisted, if an
+exact entry keeps warning. Azure's lists the models a
 resource can deploy, with their retirement dates and stage (preview or
 generally available, reported as info); Bedrock's has each model's
 lifecycle (active or legacy) and end-of-life date.
@@ -539,11 +542,13 @@ columns and an index each.
 For RadarModel AI, the tests cover the commands, the four providers, the
 severity rules and the alert outputs, and the failure tests aim at the main
 promise. A fake API
-serving all four providers is made to fail in every way listed above, and
+serving all nine providers is made to fail in every way listed above, and
 each test checks that the failure is reported as an error, that no change is
 reported, that the stored snapshot is byte-for-byte the same, and that the
-next good scan finds nothing to report. A live scan of OpenRouter's public
-list is recorded too. The results are in [test/results](test/results).
+next good scan finds nothing to report. Mistral, Groq, xAI, Azure and
+Bedrock are tested against responses shaped like their documented ones
+(Bedrock's request signing against botocore's), not against the live
+services. A live scan of OpenRouter's public list is recorded too. The results are in [test/results](test/results).
 
 ## How it works
 

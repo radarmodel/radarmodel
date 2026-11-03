@@ -307,7 +307,7 @@ openai:text-embedding-3-small                 found  gpt_researcher/config/varia
 openrouter:openai/gpt-4o                      found  evals/hallucination_eval/evaluate.py:21
 
 == browser-use https://github.com/browser-use/browser-use at b49a68e
-445 files read, 215 models found
+445 files read, 207 models found
 anthropic:claude-3-5-haiku-latest                         found  browser_use/llm/tests/test_chat_models.py:104, browser_use/llm/tests/test_chat_models.py:118
 anthropic:claude-3-5-sonnet                               found  tests/ci/test_coordinate_clicking.py:133
 anthropic:claude-3-5-sonnet-20240620                      found  examples/ui/command_line.py:40, examples/ui/streamlit_demo.py:38
@@ -331,7 +331,6 @@ anthropic:claude-sonnet-4-5-20250101                      found  tests/ci/test_c
 anthropic:claude-sonnet-4-6                               found  browser_use/tokens/custom_pricing.py:31, tests/ci/models/test_llm_anthropic.py:11, tests/ci/models/test_llm_browseruse.py:97, +23 more
 anthropic:claude-sonnet-5                                 found  tests/ci/test_anthropic_serialized_tool_input.py:25, tests/ci/test_anthropic_serialized_tool_input.py:34
 bedrock:anthropic.claude-3-5-sonnet-20240620-v1:0         found  browser_use/llm/aws/chat_anthropic.py:42, browser_use/llm/aws/chat_bedrock.py:41, tests/ci/models/test_chat_anthropic_bedrock_empty_content.py:16
-bedrock:anthropic.claude-sonnet-4-6                       found  browser_use/mcp/server.py:670, examples/models/aws.py:27
 bedrock:meta.llama4-maverick-17b-instruct-v1:0            found  examples/models/aws.py:54
 google:gemini-1.5-flash                                   found  examples/custom-functions/parallel_agents.py:246
 google:gemini-1.5-pro                                     found  tests/ci/test_coordinate_clicking.py:138
@@ -358,17 +357,10 @@ google:gemma-3n-e4b                                       found  browser_use/llm
 google:veo-3.0-generate-001                               found  examples/apps/ad-use/ad_generator.py:238
 groq:llama-3.3-70b-versatile                              found  tests/ci/models/test_llm_groq.py:79, tests/ci/models/test_llm_groq.py:91
 mistral:codestral-latest                                  found  browser_use/llm/models.py:110, browser_use/llm/models.py:198, tests/ci/models/test_llm_model_factory.py:41
-mistral:devstral-2                                        found  browser_use/llm/vercel/chat.py:147
-mistral:devstral-small-2                                  found  browser_use/llm/vercel/chat.py:149
-mistral:ministral-14b                                     found  browser_use/llm/vercel/chat.py:152
-mistral:ministral-3b                                      found  browser_use/llm/vercel/chat.py:153
-mistral:ministral-8b                                      found  browser_use/llm/vercel/chat.py:154
-mistral:mistral-large-3                                   found  browser_use/llm/vercel/chat.py:156
 mistral:mistral-large-latest                              found  browser_use/llm/models.py:107, browser_use/llm/models.py:195, tests/ci/models/test_llm_model_factory.py:38
 mistral:mistral-medium-latest                             found  browser_use/llm/mistral/chat.py:28, browser_use/llm/models.py:108, browser_use/llm/models.py:112, +5 more
 mistral:mistral-small-2506                                found  examples/models/mistral.py:16
 mistral:mistral-small-latest                              found  browser_use/llm/models.py:109, browser_use/llm/models.py:197, tests/ci/models/test_llm_model_factory.py:40
-mistral:pixtral-12b                                       found  browser_use/llm/vercel/chat.py:161
 openai:gpt-3.5-turbo                                      found  tests/ci/models/test_azure_responses_api.py:173
 openai:gpt-4                                              found  tests/ci/models/test_azure_responses_api.py:173
 openai:gpt-4-turbo                                        found  tests/ci/test_coordinate_clicking.py:136
