@@ -43,7 +43,12 @@ if [ "${#text}" -gt 60000 ]; then
 
 The report is longer than a comment can hold; the rest is in the job summary."
 fi
-body=$(jq -n --arg b "$text" '{body: $b}')
+# Through a file, not an argument: Windows limits a command line to about
+# 32,000 characters.
+textfile=$(mktemp)
+trap 'rm -f "$textfile"' EXIT
+printf '%s' "$text" > "$textfile"
+body=$(jq -n --rawfile b "$textfile" '{body: $b}')
 
 # The account the token posts as: a personal token's user, or the Actions
 # bot for GITHUB_TOKEN (which can't read /user).
@@ -96,7 +101,7 @@ issue)
 		gh api -X POST "repos/$repo/issues/$number/comments" --input - <<< "$body" > /dev/null
 		echo "commented on #$number"
 	else
-		jq -n --arg title "$title" --arg label "$label" --arg body "$text" \
+		jq -n --arg title "$title" --arg label "$label" --rawfile body "$textfile" \
 			'{title: $title, body: $body, labels: [$label]}' |
 			gh api -X POST "repos/$repo/issues" --input - --jq '"opened #\(.number)"'
 	fi
